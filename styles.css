@@ -588,4 +588,16 @@ input:focus, textarea:focus {
 
 .json-container .file-name-container span {
     color: #666;
+}
+
+.path-warning {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #ffbc03;
+  background-color: #ffbc03;
+  font-weight: bold;
+  margin-left: 5px;
+  cursor: help;
 } 

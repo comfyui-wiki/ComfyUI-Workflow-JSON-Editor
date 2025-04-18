@@ -204,7 +204,7 @@ function parseJsonData() {
     // Update statistics
     updateStats();
 
-    showMessage("JSON parsed successfully");
+    // showMessage("JSON parsed successfully");
   } catch (error) {
     nodesContainer.innerHTML = `
       <div class="error">
@@ -353,7 +353,7 @@ function findNodesToEdit(nodes) {
             ? [...node.properties.models]
             : [],
         modelFiles: modelFiles, // Store all model files
-        fileName: modelFiles[0].split("\\").pop(), // Compatible with old code, keep the first file name
+        fileName: modelFiles[0].split(/[\\\/]/).pop(), // Compatible with old code, keep the first file name
       });
     }
   }
@@ -369,7 +369,7 @@ function getModelFileName(values) {
       typeof value === "string" &&
       (value.includes(".safetensors") || value.includes(".sft"))
     ) {
-      return value.split("\\").pop();
+      return value.split(/[\\\/]/).pop();
     }
   }
   return "";
@@ -449,23 +449,43 @@ function createNodeCard(nodeInfo) {
     // If there are multiple model files, add a title
     const fileListTitle = document.createElement("div");
     fileListTitle.className = "file-list-title";
-    fileListTitle.innerHTML = `<strong>Detected ${modelFiles.length} model files:</strong>`;
+    fileListTitle.innerHTML = `<strong>检测到 ${modelFiles.length} 个模型文件:</strong>`;
     fileListDiv.appendChild(fileListTitle);
 
-    // Add each file
+    // Add each file, preserving the original path and adding warning hint
     for (let i = 0; i < modelFiles.length; i++) {
       const fileNameDiv = document.createElement("div");
       fileNameDiv.className = "file-name";
+
+      // Check if it contains path separators
+      const originalPath = modelFiles[i];
+      const hasPath = originalPath.includes("/") || originalPath.includes("\\");
+
+      // Display the original path, and add yellow dot hint if there's a folder path
       fileNameDiv.innerHTML = `<span class="file-index">${
         i + 1
-      }.</span> ${modelFiles[i].split("\\").pop()}`;
+      }.</span> ${originalPath} ${
+        hasPath
+          ? '<div class="path-warning" title="including folder path">⚠</div>'
+          : ""
+      }`;
       fileListDiv.appendChild(fileNameDiv);
     }
   } else {
-    // Display single file
+    // Display single file, preserving the original path
     const fileNameDiv = document.createElement("div");
     fileNameDiv.className = "file-name";
-    fileNameDiv.textContent = fileName;
+
+    // Check if it contains path separators
+    const originalPath = modelFiles[0];
+    const hasPath = originalPath.includes("/") || originalPath.includes("\\");
+
+    // Display the original path, and add yellow dot hint if there's a folder path
+    fileNameDiv.innerHTML = `${originalPath} ${
+      hasPath
+        ? '<span class="path-warning" title="包含文件夹路径">⚠</span>'
+        : ""
+    }`;
     fileListDiv.appendChild(fileNameDiv);
   }
 
@@ -491,7 +511,7 @@ function createNodeCard(nodeInfo) {
     // Check for unadded model files
     const existingNames = existingModels.map((model) => model.name);
     const missingFiles = modelFiles
-      .map((file) => file.split("\\").pop())
+      .map((file) => file.split(/[\\\/]/).pop())
       .filter((file) => !existingNames.some((name) => name === file));
 
     // Create entries for each unadded model file
@@ -507,7 +527,7 @@ function createNodeCard(nodeInfo) {
   } else {
     // If there are no existing models, add an empty model entry for each model file
     for (const file of modelFiles) {
-      const fileBaseName = file.split("\\").pop();
+      const fileBaseName = file.split(/[\\\/]/).pop();
       const emptyModel = {
         name: fileBaseName,
         url: "",
@@ -551,14 +571,14 @@ function getClosestFileName(modelName, modelFiles) {
 
   // Try exact match
   for (const file of modelFiles) {
-    const fileName = file.split("\\").pop();
+    const fileName = file.split(/[\\\/]/).pop();
     if (fileName === modelName) {
       return fileName;
     }
   }
 
   // Return the first file name as default
-  return modelFiles[0].split("\\").pop();
+  return modelFiles[0].split(/[\\\/]/).pop();
 }
 
 // Scroll to the node position in JSON
@@ -908,7 +928,7 @@ function updateNameValidation(name, fileName, validationElement) {
   }
 
   // Clean the file name (remove path prefix)
-  const cleanFileName = fileName.split("\\").pop();
+  const cleanFileName = fileName.split(/[\\\/]/).pop();
 
   if (name === fileName || name === cleanFileName) {
     validationElement.className = "validation-status valid";
