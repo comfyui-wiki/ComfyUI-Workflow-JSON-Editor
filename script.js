@@ -348,42 +348,42 @@ function findNodesToEdit(nodes) {
       continue;
     }
 
-    // 新增: 检查节点类型是否在 directoryRules 中
+    // 检查节点类型是否在 directoryRules 中
     const isNodeTypeInRules =
       node.type && directoryRules.hasOwnProperty(node.type);
 
-    // 检查 widget_values 中是否有 .safetensors 或 .sft 文件
+    // 检查 widget_values 中是否有可能的模型文件
     const modelFiles = [];
     for (const value of node.widgets_values) {
       if (value && typeof value === "string") {
-        // 检查文件是否有模型文件后缀，或者节点类型在 directoryRules 中
-        if (
-          value.includes(".safetensors") ||
-          value.includes(".sft") ||
-          isNodeTypeInRules
-        ) {
+        // 首先检查是否包含点号，这是文件名的基本要求
+        const containsDot = value.includes(".");
+
+        // 检查是否有模型文件后缀
+        const hasSafetensorsExt = value.toLowerCase().includes(".safetensors");
+        const hasSftExt = value.toLowerCase().includes(".sft");
+        const hasValidExt = hasSafetensorsExt || hasSftExt;
+
+        // 检查是否是合法的文件名(不是 "default" 或其他常见配置值)
+        const isValidFileName =
+          containsDot &&
+          !/^(default|none|empty|null|undefined|clip|checkpoint|controlnet|diffusers|lora|vae)$/i.test(
+            value
+          );
+
+        // 如果有有效的模型文件后缀，则添加为模型文件
+        if (hasValidExt) {
+          modelFiles.push(value);
+        }
+        // 如果节点类型在已知模型节点列表中，并且看起来是合法的文件名，也添加
+        else if (isNodeTypeInRules && isValidFileName && value.trim() !== "") {
           modelFiles.push(value);
         }
       }
     }
 
     // 只要有任何一种情况满足就添加节点
-    if (modelFiles.length > 0 || isNodeTypeInRules) {
-      // 如果节点类型在规则中但没有找到模型文件，则将所有非空字符串值添加到模型文件中
-      if (modelFiles.length === 0 && isNodeTypeInRules) {
-        for (const value of node.widgets_values) {
-          if (value && typeof value === "string" && value.trim() !== "") {
-            modelFiles.push(value);
-          }
-        }
-      }
-
-      // 确保至少有一个值
-      if (modelFiles.length === 0 && node.widgets_values.length > 0) {
-        // 添加第一个非空值或空字符串
-        modelFiles.push(node.widgets_values[0] || "");
-      }
-
+    if (modelFiles.length > 0) {
       result.push({
         node,
         existingModels:
@@ -393,8 +393,31 @@ function findNodesToEdit(nodes) {
         modelFiles: modelFiles,
         fileName:
           modelFiles.length > 0 ? modelFiles[0].split(/[\\\/]/).pop() : "",
-        isNodeTypeInRules: isNodeTypeInRules, // 添加这个标志以便后续处理
+        isNodeTypeInRules: isNodeTypeInRules,
       });
+    }
+    // 对于没找到模型文件但节点类型在规则中的节点，也添加它们，但需要检查第一个值是否可能是文件
+    else if (isNodeTypeInRules && node.widgets_values.length > 0) {
+      const firstValue = node.widgets_values[0];
+      // 只有当第一个值看起来像文件名时才添加
+      if (
+        firstValue &&
+        typeof firstValue === "string" &&
+        firstValue.includes(".") &&
+        firstValue.trim() !== ""
+      ) {
+        modelFiles.push(firstValue);
+        result.push({
+          node,
+          existingModels:
+            node.properties && node.properties.models
+              ? [...node.properties.models]
+              : [],
+          modelFiles: [firstValue],
+          fileName: firstValue.split(/[\\\/]/).pop(),
+          isNodeTypeInRules: isNodeTypeInRules,
+        });
+      }
     }
   }
 
