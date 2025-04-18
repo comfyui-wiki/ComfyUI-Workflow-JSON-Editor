@@ -53,6 +53,16 @@ let nodesToEdit = [];
 // Store node positions in JSON
 let nodePositions = {};
 
+// 添加全局状态变量
+let validationStatus = {
+  hasErrors: false,
+  hasWarnings: false,
+  missingLinks: 0,
+  invalidLinks: 0,
+  formatErrors: 0,
+  urlMismatch: 0,
+};
+
 // Initialize the page
 function initPage() {
   // Set line numbers
@@ -103,6 +113,18 @@ function initPage() {
   clearBulkLinks.addEventListener("click", () => {
     bulkLinksInput.value = "";
   });
+
+  // 创建验证状态显示区域
+  const actionsContainer = document.querySelector(".actions");
+  if (actionsContainer) {
+    const validationInfoElement = document.createElement("div");
+    validationInfoElement.id = "validation-info";
+    validationInfoElement.className = "validation-info";
+    actionsContainer.parentNode.insertBefore(
+      validationInfoElement,
+      actionsContainer.nextSibling
+    );
+  }
 }
 
 // Sync the scroll of the text area and line numbers
@@ -218,6 +240,9 @@ function parseJsonData() {
 
     // 找出错误的模型文件并显示在顶部
     updateInvalidModelsList();
+
+    // 添加: 验证所有模型配置
+    validateAllModels();
 
     // showMessage("JSON parsed successfully");
   } catch (error) {
@@ -1691,6 +1716,9 @@ function updateWidgetsValue(nodeId, oldValue, newValue) {
 
   // 更新错误模型列表
   updateInvalidModelsList();
+
+  // 添加: 验证所有模型配置
+  validateAllModels();
 }
 
 // 修改错误模型列表生成函数
@@ -1777,6 +1805,191 @@ function updateInvalidModelsList() {
   } else {
     invalidModelsPanel.style.display = "none";
   }
+}
+
+// 修改 validateAllModels 函数，添加名称与URL匹配检查
+function validateAllModels() {
+  // 重置状态
+  validationStatus = {
+    hasErrors: false,
+    hasWarnings: false,
+    missingLinks: 0,
+    invalidLinks: 0,
+    formatErrors: 0,
+    urlMismatch: 0,
+  };
+
+  if (!parsedJson || !parsedJson.nodes || !Array.isArray(parsedJson.nodes)) {
+    return;
+  }
+
+  // 遍历所有节点
+  for (const nodeInfo of nodesToEdit) {
+    const { node, modelFiles, isNodeTypeInRules } = nodeInfo;
+
+    // 跳过非模型节点
+    if (!isNodeTypeInRules) continue;
+
+    // 检查节点是否有模型配置
+    const hasModelsProperty =
+      node.properties && Array.isArray(node.properties.models);
+
+    // 找出符合格式要求的文件名
+    const validModelFiles = modelFiles.filter((file) => {
+      return isValidModelExtension(file, null); // 仅检查文件扩展名，不考虑节点类型
+    });
+
+    // 1. 检查模型数量是否匹配
+    if (hasModelsProperty) {
+      if (validModelFiles.length !== node.properties.models.length) {
+        validationStatus.hasWarnings = true;
+        console.warn(
+          `模型数量不匹配: 节点 ${node.id} (${node.type}) 有 ${validModelFiles.length} 个有效模型文件，但有 ${node.properties.models.length} 个模型配置`
+        );
+      }
+
+      // 2. 检查每个模型配置
+      for (const model of node.properties.models) {
+        // 检查模型名称是否在 widgets_values 中
+        const modelNameInWidgets = modelFiles.some((file) => {
+          const fileName = file.split(/[\\\/]/).pop();
+          return fileName === model.name || file === model.name;
+        });
+
+        if (!modelNameInWidgets) {
+          validationStatus.hasWarnings = true;
+          console.warn(
+            `模型名称不匹配: 节点 ${node.id} (${node.type}) 中的模型 "${model.name}" 未在 widgets_values 中找到`
+          );
+        }
+
+        // 检查模型文件格式
+        const hasValidExtension =
+          model.name.toLowerCase().endsWith(".safetensors") ||
+          model.name.toLowerCase().endsWith(".sft");
+
+        if (!hasValidExtension) {
+          validationStatus.hasErrors = true;
+          validationStatus.formatErrors++;
+          console.error(
+            `模型文件格式错误: 节点 ${node.id} (${node.type}) 中的模型 "${model.name}" 不是 .safetensors 或 .sft 格式`
+          );
+        }
+
+        // 检查模型URL
+        if (!model.url || model.url.trim() === "") {
+          validationStatus.hasWarnings = true;
+          validationStatus.missingLinks++;
+        } else if (!model.url.includes("http")) {
+          validationStatus.hasWarnings = true;
+          validationStatus.invalidLinks++;
+        } else {
+          // 新增：检查模型名称是否包含在URL中
+          const modelNameWithoutExt = model.name.replace(
+            /\.(safetensors|sft)$/i,
+            ""
+          );
+          const modelNameBase = modelNameWithoutExt.split(/[_\-\.]/)[0]; // 获取基础名称（第一部分）
+
+          // 解码URL以便进行比较
+          const decodedUrl = decodeURIComponent(model.url);
+
+          // 首先尝试完整匹配
+          const nameInUrl = decodedUrl.includes(model.name);
+
+          // 如果完整匹配失败，尝试基础名称匹配
+          const baseNameInUrl =
+            !nameInUrl &&
+            modelNameBase.length > 3 &&
+            decodedUrl.includes(modelNameBase);
+
+          if (!nameInUrl && !baseNameInUrl) {
+            validationStatus.hasWarnings = true;
+            validationStatus.urlMismatch++;
+            console.warn(
+              `模型名称未包含在URL中: 节点 ${node.id} (${node.type}) 中的模型 "${model.name}" 的URL不包含模型名称`
+            );
+          }
+        }
+      }
+    } else if (validModelFiles.length > 0) {
+      // 3. 如果节点有有效模型文件但没有模型配置
+      validationStatus.hasWarnings = true;
+      validationStatus.missingLinks += validModelFiles.length;
+      console.warn(
+        `缺少模型配置: 节点 ${node.id} (${node.type}) 有 ${validModelFiles.length} 个有效模型文件，但没有模型配置`
+      );
+    }
+  }
+
+  // 更新按钮状态
+  updateButtonsStatus();
+}
+
+// 修改更新按钮状态函数，直接显示验证信息
+function updateButtonsStatus() {
+  // 更新复制和保存按钮的状态
+  const copyBtn = document.getElementById("copyBtn");
+  const saveBtn = document.getElementById("saveBtn");
+
+  // 获取验证信息显示元素
+  const validationInfoElement = document.getElementById("validation-info");
+
+  // 移除旧的状态类
+  copyBtn.classList.remove("status-success", "status-warning", "status-error");
+  saveBtn.classList.remove("status-success", "status-warning", "status-error");
+  validationInfoElement.classList.remove(
+    "info-success",
+    "info-warning",
+    "info-error"
+  );
+
+  // 构建验证信息内容
+  let validationMessage = "";
+
+  // 添加新的状态类和信息
+  if (validationStatus.hasErrors) {
+    copyBtn.classList.add("status-error");
+    saveBtn.classList.add("status-error");
+    validationInfoElement.classList.add("info-error");
+
+    validationMessage = `<span class="validation-icon">❌</span> 有 ${validationStatus.formatErrors} 个模型格式错误`;
+  } else if (validationStatus.hasWarnings) {
+    copyBtn.classList.add("status-warning");
+    saveBtn.classList.add("status-warning");
+    validationInfoElement.classList.add("info-warning");
+
+    validationMessage = `<span class="validation-icon">⚠️</span> 警告: `;
+
+    const warningItems = [];
+    if (validationStatus.missingLinks > 0) {
+      warningItems.push(`${validationStatus.missingLinks} 个缺失链接`);
+    }
+    if (validationStatus.invalidLinks > 0) {
+      warningItems.push(`${validationStatus.invalidLinks} 个无效链接`);
+    }
+    if (validationStatus.urlMismatch > 0) {
+      warningItems.push(`${validationStatus.urlMismatch} 个名称与URL不匹配`);
+    }
+
+    validationMessage += warningItems.join(", ");
+  } else if (parsedJson && nodesToEdit.length > 0) {
+    copyBtn.classList.add("status-success");
+    saveBtn.classList.add("status-success");
+    validationInfoElement.classList.add("info-success");
+
+    validationMessage = `<span class="validation-icon">✅</span> 所有模型配置有效`;
+  } else {
+    // 没有加载任何JSON或没有模型节点
+    validationMessage = ""; // 不显示任何验证信息
+  }
+
+  // 更新验证信息显示
+  validationInfoElement.innerHTML = validationMessage;
+
+  // 仍然保留title提示，以便显示更详细信息
+  copyBtn.title = validationMessage.replace(/<[^>]*>/g, "");
+  saveBtn.title = validationMessage.replace(/<[^>]*>/g, "");
 }
 
 // Initialize after the page loads
