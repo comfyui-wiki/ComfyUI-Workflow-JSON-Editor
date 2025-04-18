@@ -600,4 +600,32 @@ input:focus, textarea:focus {
   font-weight: bold;
   margin-left: 5px;
   cursor: help;
+}
+
+/* 模型路径输入框样式 */
+.model-path-container {
+  display: flex;
+  align-items: center;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px;
+  margin-bottom: 15px;
+  margin-top: 10px;
+}
+
+.model-path-input {
+  flex: 1;
+  font-family: monospace;
+  color: #2980b9;
+  border: none;
+  background-color: transparent;
+  padding: 5px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.model-path-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
 } 

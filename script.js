@@ -423,9 +423,40 @@ function createNodeCard(nodeInfo) {
         <span class="node-id">ID: ${node.id}</span>
     `;
 
+  // 添加可编辑的模型路径容器
+  const modelPathContainer = document.createElement("div");
+  modelPathContainer.className = "model-path-container";
+
+  // 创建模型路径输入框
+  const modelPathInput = document.createElement("input");
+  modelPathInput.className = "model-path-input";
+  modelPathInput.value = modelFiles[0]; // 使用完整原始路径
+  modelPathInput.title = "编辑此路径将更新 JSON 中的 widgets_values";
+
+  // 检查是否包含路径分隔符
+  const hasPath = modelFiles[0].includes("/") || modelFiles[0].includes("\\");
+
+  // 添加事件监听器，当输入内容改变时更新 widgets_values
+  modelPathInput.addEventListener("input", (e) => {
+    updateWidgetsValue(node.id, modelFiles[0], e.target.value);
+  });
+
+  modelPathContainer.appendChild(modelPathInput);
+
+  // 如果包含路径，添加警告指示器
+  if (hasPath) {
+    const pathWarning = document.createElement("span");
+    pathWarning.className = "path-warning";
+    pathWarning.title = "包含文件夹路径";
+    modelPathContainer.appendChild(pathWarning);
+  }
+
   // Node body content
   const body = document.createElement("div");
   body.className = "node-body";
+
+  // 添加模型路径容器到卡片头部或正文顶部
+  body.appendChild(modelPathContainer);
 
   // Add empty property warning (if needed)
   const hasEmptyProperties =
@@ -441,55 +472,37 @@ function createNodeCard(nodeInfo) {
     body.appendChild(warningDiv);
   }
 
-  // Display all model files
-  const fileListDiv = document.createElement("div");
-  fileListDiv.className = "file-list";
-
+  // 移除原来的文件列表显示，因为已经有了可编辑的输入框
+  // 如果有多个模型文件，仍然保留文件列表，但主文件已在顶部输入框中
   if (modelFiles.length > 1) {
-    // If there are multiple model files, add a title
+    const fileListDiv = document.createElement("div");
+    fileListDiv.className = "file-list";
+
     const fileListTitle = document.createElement("div");
     fileListTitle.className = "file-list-title";
-    fileListTitle.innerHTML = `<strong>检测到 ${modelFiles.length} 个模型文件:</strong>`;
+    fileListTitle.innerHTML = `<strong>其他模型文件 (${
+      modelFiles.length - 1
+    }):</strong>`;
     fileListDiv.appendChild(fileListTitle);
 
-    // Add each file, preserving the original path and adding warning hint
-    for (let i = 0; i < modelFiles.length; i++) {
+    // 添加除了主文件以外的其他文件
+    for (let i = 1; i < modelFiles.length; i++) {
       const fileNameDiv = document.createElement("div");
       fileNameDiv.className = "file-name";
 
-      // Check if it contains path separators
       const originalPath = modelFiles[i];
       const hasPath = originalPath.includes("/") || originalPath.includes("\\");
 
-      // Display the original path, and add yellow dot hint if there's a folder path
-      fileNameDiv.innerHTML = `<span class="file-index">${
-        i + 1
-      }.</span> ${originalPath} ${
+      fileNameDiv.innerHTML = `<span class="file-index">${i}.</span> ${originalPath} ${
         hasPath
-          ? '<div class="path-warning" title="including folder path">⚠</div>'
+          ? '<span class="path-warning" title="包含文件夹路径"></span>'
           : ""
       }`;
       fileListDiv.appendChild(fileNameDiv);
     }
-  } else {
-    // Display single file, preserving the original path
-    const fileNameDiv = document.createElement("div");
-    fileNameDiv.className = "file-name";
 
-    // Check if it contains path separators
-    const originalPath = modelFiles[0];
-    const hasPath = originalPath.includes("/") || originalPath.includes("\\");
-
-    // Display the original path, and add yellow dot hint if there's a folder path
-    fileNameDiv.innerHTML = `${originalPath} ${
-      hasPath
-        ? '<span class="path-warning" title="包含文件夹路径">⚠</span>'
-        : ""
-    }`;
-    fileListDiv.appendChild(fileNameDiv);
+    body.appendChild(fileListDiv);
   }
-
-  body.appendChild(fileListDiv);
 
   // Model entry container
   const modelsContainer = document.createElement("div");
@@ -1396,6 +1409,119 @@ function findMatchingModelEntry(fileName, modelMap) {
   }
 
   return null;
+}
+
+// 修改 updateWidgetsValue 函数，添加更多的更新逻辑
+function updateWidgetsValue(nodeId, oldValue, newValue) {
+  if (!parsedJson) return;
+
+  // 找到对应的节点
+  const node = parsedJson.nodes.find((n) => n.id === nodeId);
+  if (!node || !node.widgets_values) return;
+
+  // 查找并更新 widgets_values 中的值
+  for (let i = 0; i < node.widgets_values.length; i++) {
+    if (node.widgets_values[i] === oldValue) {
+      node.widgets_values[i] = newValue;
+      break;
+    }
+  }
+
+  // 更新 JSON 文本区域
+  const formattedJson = JSON.stringify(parsedJson, null, 2);
+  jsonInput.value = formattedJson;
+  updateLineNumbers();
+
+  // 重新查找节点位置
+  findNodePositions(formattedJson);
+
+  // 同步更新编辑区，需要更新文件名供模型条目使用
+  const nodeInfo = nodesToEdit.find((info) => info.node.id === nodeId);
+  if (nodeInfo) {
+    // 更新 modelFiles 数组中对应的值
+    const index = nodeInfo.modelFiles.indexOf(oldValue);
+    if (index !== -1) {
+      nodeInfo.modelFiles[index] = newValue;
+
+      // 提取新的基本文件名（不含路径）
+      const newBaseName = newValue.split(/[\\\/]/).pop();
+
+      // 更新相关的模型条目验证状态
+      const modelsContainer = document.querySelector(
+        `.models-container[data-node-id="${nodeId}"]`
+      );
+      if (modelsContainer) {
+        const modelEntries = modelsContainer.querySelectorAll(".model-entry");
+
+        modelEntries.forEach((entry) => {
+          const nameInput = entry.querySelector(
+            ".form-group:nth-child(1) input"
+          );
+          const validationElement = entry.querySelector(
+            ".form-group:nth-child(1) .validation-status"
+          );
+
+          if (nameInput && validationElement) {
+            // 更新名称验证
+            updateNameValidation(
+              nameInput.value,
+              newBaseName,
+              validationElement
+            );
+          }
+        });
+      }
+
+      // 检查是否需要更新第一个模型条目的名称（如果它是基于文件名创建的）
+      if (index === 0) {
+        // 如果是主文件被修改
+        const firstModelEntry = document.querySelector(
+          `.models-container[data-node-id="${nodeId}"] .model-entry:first-child`
+        );
+        if (firstModelEntry) {
+          const nameInput = firstModelEntry.querySelector(
+            ".form-group:nth-child(1) input"
+          );
+          // 如果当前名称与旧的基本文件名相同，则更新为新的文件名
+          const oldBaseName = oldValue.split(/[\\\/]/).pop();
+          if (nameInput && nameInput.value === oldBaseName) {
+            nameInput.value = newBaseName;
+            // 触发验证更新
+            nameInput.dispatchEvent(new Event("input"));
+          }
+        }
+      }
+    }
+  }
+
+  // 更新其他模型文件列表（如果存在）
+  if (modelFiles && modelFiles.length > 1) {
+    const fileListDiv = document.querySelector(
+      `.node-card[data-node-id="${nodeId}"] .file-list`
+    );
+    if (fileListDiv) {
+      // 如果是第一个文件被修改，不需要更新列表（因为它显示在输入框中）
+      // 如果是其他文件被修改，我们需要更新列表中的显示
+      const fileIndex = index;
+      if (fileIndex > 0) {
+        const fileNameDivs = fileListDiv.querySelectorAll(".file-name");
+        if (fileNameDivs && fileNameDivs[fileIndex - 1]) {
+          // 因为列表中索引从0开始，但我们跳过了第一个文件
+          const hasPath = newValue.includes("/") || newValue.includes("\\");
+          fileNameDivs[
+            fileIndex - 1
+          ].innerHTML = `<span class="file-index">${fileIndex}.</span> ${newValue} ${
+            hasPath
+              ? '<span class="path-warning" title="包含文件夹路径"></span>'
+              : ""
+          }`;
+        }
+      }
+    }
+  }
+
+  // 更新统计信息
+  updateStats();
 }
 
 // Initialize after the page loads
