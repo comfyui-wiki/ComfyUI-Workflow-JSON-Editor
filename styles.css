@@ -1,0 +1,591 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+header {
+    background-color: #2c3e50;
+    color: #fff;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    font-size: 24px;
+    font-weight: 500;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+main {
+    display: flex;
+    height: calc(100vh - 100px);
+    min-height: 600px;
+}
+
+.json-container, .models-container {
+    padding: 20px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.json-container {
+    flex: 1;
+    border-right: 1px solid #eee;
+}
+
+.models-container {
+    flex: 1;
+}
+
+h2 {
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #2c3e50;
+}
+
+h3 {
+    margin: 15px 0 10px;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.editor-wrapper {
+    display: flex;
+    height: calc(100% - 40px);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.line-numbers {
+    width: 50px;
+    background-color: #f8f8f8;
+    color: #999;
+    text-align: right;
+    padding: 10px 5px;
+    font-family: monospace;
+    font-size: 14px;
+    overflow-y: hidden;
+    user-select: none;
+}
+
+#jsonInput {
+    flex: 1;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 14px;
+    resize: none;
+    border: none;
+    outline: none;
+    line-height: 1.5;
+}
+
+.directory-settings {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f8f8;
+    border-radius: 6px;
+}
+
+.directory-rule {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.directory-rule input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    flex: 1;
+}
+
+.remove-rule {
+    background-color: #e74c3c;
+}
+
+.remove-rule:hover {
+    background-color: #c0392b;
+}
+
+#nodesContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.empty-message {
+    text-align: center;
+    color: #999;
+    padding: 40px 0;
+}
+
+.node-card {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.node-header {
+    padding: 10px 15px;
+    background-color: #ecf0f1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.node-type {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.node-id {
+    color: #7f8c8d;
+    font-size: 13px;
+}
+
+.node-body {
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.file-name {
+    font-family: monospace;
+    color: #2980b9;
+    margin-bottom: 10px;
+    background-color: #f8f8f8;
+    padding: 5px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.model-entry {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #fff;
+}
+
+.warning {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.input-with-validation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-with-validation input {
+    flex: 1;
+}
+
+.validation-status {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+
+.valid {
+    background-color: #2ecc71;
+}
+
+.invalid {
+    background-color: #e74c3c;
+}
+
+input:not([type="checkbox"]), textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border 0.2s;
+}
+
+input:focus, textarea:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+.add-model {
+    margin-top: 10px;
+}
+
+.add-model:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.model-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.error {
+    padding: 10px;
+    background-color: #ffecec;
+    color: #e74c3c;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* 统计面板样式 */
+.stats-panel {
+    display: flex;
+    justify-content: space-between;
+    background-color: #f8f8f8;
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 0 10px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-right: 5px;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* 可点击的统计数字 */
+.stat-value.clickable {
+    cursor: pointer;
+    text-decoration: underline;
+    color: #3498db;
+}
+
+.stat-value.clickable:hover {
+    color: #2980b9;
+}
+
+/* 错误和缺失模型条目样式 */
+.model-entry.error-url {
+    background-color: #ffeeee;
+    border-left: 3px solid #e74c3c;
+}
+
+.model-entry.missing-url {
+    background-color: #fff8e1;
+    border-left: 3px solid #f39c12;
+}
+
+/* 高亮当前编辑的卡片 */
+.node-card.active {
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+/* 高亮JSON区域的行 */
+.highlight-line {
+    background-color: rgba(255, 223, 0, 0.3);
+}
+
+/* 添加模型卡片提示样式 */
+.empty-properties-warning {
+    background-color: #ffecec;
+    border-left: 4px solid #e74c3c;
+    color: #e74c3c;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    border-radius: 0 4px 4px 0;
+}
+
+.empty-properties-warning i {
+    margin-right: 5px;
+}
+
+/* 文件列表样式 */
+.file-list {
+    margin-bottom: 15px;
+}
+
+.file-list-title {
+    font-size: 14px;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.file-name {
+    font-family: monospace;
+    color: #2980b9;
+    margin-bottom: 5px;
+    background-color: #f8f8f8;
+    padding: 5px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.file-index {
+    color: #7f8c8d;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+/* 消息通知样式 */
+#message-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    max-width: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+
+.message {
+    background-color: #2ecc71;
+    color: white;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 1;
+    transition: opacity 0.5s, transform 0.3s;
+    text-align: center;
+    min-width: 200px;
+    max-width: 100%;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.message.fade-out {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.message.error {
+    background-color: #e74c3c;
+}
+
+.message.info {
+    background-color: #3498db;
+}
+
+/* 文件信息样式 */
+.file-info {
+    display: flex;
+    align-items: center;
+    margin: 0 20px;
+}
+
+.file-name-container {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 0 10px;
+}
+
+.file-name-container input {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 5px;
+    font-size: 16px;
+    max-width: 250px;
+    outline: none;
+}
+
+.file-name-container span {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.upload-btn {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+    display: inline-block;
+}
+
+.upload-btn:hover {
+    background-color: #2980b9;
+}
+
+/* 条目高亮效果 */
+@keyframes highlightPulse {
+  0% { box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(52, 152, 219, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
+}
+
+.model-entry.highlight-entry {
+  animation: highlightPulse 1.5s ease;
+}
+
+/* 批量链接填充面板样式 */
+.bulk-links-panel {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+}
+
+.bulk-links-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#bulkLinksInput {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.panel-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.panel-actions button {
+    padding: 8px 16px;
+}
+
+/* 链接匹配成功动画 */
+@keyframes linkMatchSuccess {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(46, 204, 113, 0.2); }
+    100% { background-color: transparent; }
+}
+
+.model-entry.link-matched {
+    animation: linkMatchSuccess 1.5s ease;
+}
+
+/* 区域标题栏样式 */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.section-header h2 {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.json-container .file-info {
+    margin: 0;
+    flex-grow: 1;
+}
+
+.json-container .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .json-container .actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* 修改文件名容器样式以适应新位置 */
+.json-container .file-name-container {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.json-container .file-name-container input {
+    color: #333;
+    background-color: transparent;
+    max-width: 250px;
+}
+
+.json-container .file-name-container span {
+    color: #666;
+} 

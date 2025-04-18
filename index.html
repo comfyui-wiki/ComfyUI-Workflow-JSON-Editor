@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI workflow json editor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ComfyUI workflow json editor</h1>
+        </header>
+        
+        <!-- Message notification container -->
+        <div id="message-container"></div>
+        
+        <main>
+            <div class="json-container">
+                <div class="section-header">
+                    <h2>Editing Area</h2>
+                    <div class="file-info">
+                        <div class="file-name-container">
+                            <input type="text" id="fileName" value="Untitled" placeholder="File Name">
+                            <span>.json</span>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <label for="fileInput" class="upload-btn">Upload JSON</label>
+                        <input type="file" id="fileInput" accept=".json" style="display:none">
+                        <button id="copyBtn">Copy JSON</button>
+                        <button id="saveBtn">Save JSON</button>
+                    </div>
+                </div>
+                <div class="editor-wrapper">
+                    <div class="line-numbers" id="lineNumbers"></div>
+                    <textarea id="jsonInput" placeholder="Please paste your JSON data..."></textarea>
+                </div>
+            </div>
+            
+            <div class="models-container">
+                <h2>Model Link Editing Area</h2>
+                <div id="statsPanel" class="stats-panel">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Models:</span>
+                        <span id="totalModels" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Valid Models:</span>
+                        <span id="validModels" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Invalid Models:</span>
+                        <span id="invalidModels" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Error Links:</span>
+                        <span id="errorUrlModels" class="stat-value clickable">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Missing Links:</span>
+                        <span id="missingUrlModels" class="stat-value clickable">0</span>
+                    </div>
+                </div>
+                
+                <!-- Add bulk link filling panel -->
+                <div class="bulk-links-panel">
+                    <h3>Bulk Link Filling</h3>
+                    <div class="bulk-links-container">
+                        <textarea id="bulkLinksInput" placeholder="Paste multiple model links, the script will automatically extract links and fill them into the corresponding models..."></textarea>
+                        <div class="panel-actions">
+                            <button id="applyBulkLinks">Apply Links</button>
+                            <button id="clearBulkLinks">Clear</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="directory-settings">
+                    <h3>Directory Settings</h3>
+                    <div id="directorySettings">
+                        <!-- Directory settings will be dynamically generated here -->
+                    </div>
+                    <button id="addDirectoryRule">Add New Rule</button>
+                </div>
+                
+                <div id="nodesContainer">
+                    <!-- Nodes to be edited will be dynamically generated here -->
+                    <div class="empty-message">Please parse the JSON data first...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html> 
