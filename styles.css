@@ -628,4 +628,101 @@ input:focus, textarea:focus {
 .model-path-input:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+/* 无效扩展名警告样式 */
+.path-warning.invalid-extension {
+  background-color: #e74c3c;
+  color: #e74c3c;
+}
+
+/* 无效模型面板样式 */
+.invalid-models-panel {
+  background-color: #fff3f3;
+  border: 1px solid #ffcdd2;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.invalid-models-panel h3 {
+  margin-top: 0;
+  color: #e53935;
+  display: flex;
+  align-items: center;
+}
+
+.badge {
+  display: inline-block;
+  background-color: #e53935;
+  color: white;
+  font-size: 0.8em;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 10px;
+}
+
+.invalid-models-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.invalid-model-link {
+  padding: 8px;
+  margin: 5px 0;
+  background-color: #fff;
+  border-left: 3px solid #e53935;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.invalid-model-link:hover {
+  background-color: #ffebee;
+}
+
+/* 卡片高亮样式 */
+.node-card.highlight-error {
+  border-color: #e53935;
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.5);
+}
+
+/* 路径指示器通用样式 */
+.path-indicator {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-left: 5px;
+  cursor: help;
+}
+
+/* 有路径警告样式（黄色） */
+.path-indicator.path-warning {
+  background-color: #ffbc03;
+  color: #ffbc03;
+}
+
+/* 无效扩展名样式（红色） */
+.path-indicator.invalid-extension {
+  background-color: #e74c3c;
+  color: #e74c3c;
+}
+
+/* 有效扩展名样式（绿色） */
+.path-indicator.valid-extension {
+  background-color: #2ecc71;
+  color: #2ecc71;
+}
+
+/* 旧的样式保留兼容性 */
+.path-warning {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #ffbc03;
+  background-color: #ffbc03;
+  font-weight: bold;
+  margin-left: 5px;
+  cursor: help;
 } 
