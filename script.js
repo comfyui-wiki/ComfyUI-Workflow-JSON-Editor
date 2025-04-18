@@ -1,14 +1,26 @@
 // Define default directory rules
 let directoryRules = {
   CheckpointLoaderSimple: "checkpoints",
-  ControlNetLoader: "control_models",
-  VAELoader: "vae",
-  UpscaleModelLoader: "upscale_models",
+  CheckpointLoader: "checkpoints",
+  ControlNetLoader: "controlnet",
+  CLIPLoader: "text_encoders",
   CLIPVisionLoader: "clip_vision",
+  DiffusersLoader: "diffusers",
+  DualCLIPLoader: "text_encoders",
+  DiffControlNetLoader: "controlnet",
+  GLIGENLoader: "gligen",
+  ImageOnlyCheckpointLoader: "checkpoints",
   LoraLoader: "loras",
   LoraLoaderModelOnly: "loras",
-  ImageOnlyCheckpointLoader: "checkpoints",
+  PhotoMakerLoader: "photomaker",
   QuadrupleCLIPLoader: "text_encoders",
+  StyleModelLoader: "style_models",
+  TripleCLIPLoader: "text_encoders",
+  UpscaleModelLoader: "upscale_models",
+  unCLIPCheckpointLoader: "checkpoints",
+  UNETLoader: "diffusion_models",
+  VAELoader: "vae",
+  ImageOnlyCheckpointLoader: "checkpoints",
 };
 
 // DOM element references
