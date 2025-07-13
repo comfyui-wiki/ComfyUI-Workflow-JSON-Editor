@@ -1,0 +1,44 @@
+name: Auto Delete Merged Branch
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-branch:
+    # Only run if the PR was merged (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Delete merged branch
+        run: |
+          # Get branch name from the PR
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          
+          # Skip deletion for protected branches
+          if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" || "$BRANCH_NAME" == "develop" || "$BRANCH_NAME" == "dev" ]]; then
+            echo "Skipping deletion of protected branch: $BRANCH_NAME"
+            exit 0
+          fi
+          
+          # Check if this is a fork (external PR)
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.event.pull_request.base.repo.full_name }}" ]]; then
+            echo "This is a fork PR, cannot delete branch from external repository"
+            exit 0
+          fi
+          
+          echo "Deleting branch: $BRANCH_NAME"
+          
+          # Delete the branch using GitHub API
+          curl -X DELETE \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/git/refs/heads/$BRANCH_NAME"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Successfully deleted branch: $BRANCH_NAME"
+          else
+            echo "❌ Failed to delete branch: $BRANCH_NAME"
+            exit 1
+          fi 
