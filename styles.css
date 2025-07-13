@@ -35,6 +35,30 @@ header h1 {
     font-weight: 500;
 }
 
+
+header a {
+    display: flex;
+    align-items: center;
+    color: #fff;
+    text-decoration: none;
+}
+
+header a:hover {
+    color: #ccc;
+}
+
+.header-links {
+    display: flex;
+    gap: 10px;
+}
+
+.editor-icon {
+    width: 20px; /* 根据需要调整图标大小 */
+    height: 20px; /* 根据需要调整图标大小 */
+    margin-right: 5px; /* 图标与文本之间的间距 */
+    vertical-align: middle; /* 使图标与文本垂直对齐 */
+}
+
 .actions {
     display: flex;
     gap: 10px;
