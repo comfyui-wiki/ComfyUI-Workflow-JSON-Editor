@@ -53,7 +53,7 @@ let nodesToEdit = [];
 // Store node positions in JSON
 let nodePositions = {};
 
-// 添加全局状态变量
+// Add global status variables
 let validationStatus = {
   hasErrors: false,
   hasWarnings: false,
@@ -114,7 +114,7 @@ function initPage() {
     bulkLinksInput.value = "";
   });
 
-  // 创建验证状态显示区域
+  // Create validation status display area
   const actionsContainer = document.querySelector(".actions");
   if (actionsContainer) {
     const validationInfoElement = document.createElement("div");
@@ -238,10 +238,10 @@ function parseJsonData() {
     // Update statistics
     updateStats();
 
-    // 找出错误的模型文件并显示在顶部
+    // Find and display invalid model files at the top
     updateInvalidModelsList();
 
-    // 添加: 验证所有模型配置
+    // Add: validate all model configurations
     validateAllModels();
 
     // showMessage("JSON parsed successfully");
@@ -366,48 +366,48 @@ function findNodesToEdit(nodes) {
       continue;
     }
 
-    // 检查是否是模型加载器节点 - 必须在 properties 中有 "Node name for S&R" 属性
+    // Check if this is a model loader node - must have "Node name for S&R" property
     const isModelLoaderNode =
       node.properties && node.properties["Node name for S&R"];
     if (!isModelLoaderNode) {
       continue;
     }
 
-    // 检查节点类型是否在 directoryRules 中
+    // Check if node type is in directoryRules
     const isNodeTypeInRules =
       node.type && directoryRules.hasOwnProperty(node.type);
 
-    // 检查 widget_values 中是否有可能的模型文件
+    // Check if widget_values contains possible model files
     const modelFiles = [];
     for (const value of node.widgets_values) {
       if (value && typeof value === "string") {
-        // 首先检查是否包含点号，这是文件名的基本要求
+        // First check if contains dot - basic requirement for file names
         const containsDot = value.includes(".");
 
-        // 检查是否有模型文件后缀
+        // Check if has model file suffix
         const hasSafetensorsExt = value.toLowerCase().includes(".safetensors");
         const hasSftExt = value.toLowerCase().includes(".sft");
         const hasValidExt = hasSafetensorsExt || hasSftExt;
 
-        // 检查是否是合法的文件名(不是 "default" 或其他常见配置值)
+        // Check if is valid file name (not "default" or other common config values)
         const isValidFileName =
           containsDot &&
           !/^(default|none|empty|null|undefined|clip|checkpoint|controlnet|diffusers|lora|vae)$/i.test(
             value
           );
 
-        // 如果有有效的模型文件后缀，则添加为模型文件
+        // If has valid model file suffix, add as model file
         if (hasValidExt) {
           modelFiles.push(value);
         }
-        // 如果节点类型在已知模型节点列表中，并且看起来是合法的文件名，也添加
+        // If node type is in known model node list and looks like valid file name, also add
         else if (isNodeTypeInRules && isValidFileName && value.trim() !== "") {
           modelFiles.push(value);
         }
       }
     }
 
-    // 只要有任何一种情况满足就添加节点
+    // Add node if any condition is met
     if (modelFiles.length > 0) {
       result.push({
         node,
@@ -421,10 +421,10 @@ function findNodesToEdit(nodes) {
         isNodeTypeInRules: isNodeTypeInRules,
       });
     }
-    // 对于没找到模型文件但节点类型在规则中的节点，也添加它们，但需要检查第一个值是否可能是文件
+    // For nodes with no model files found but node type is in rules, also add them but check if first value might be file
     else if (isNodeTypeInRules && node.widgets_values.length > 0) {
       const firstValue = node.widgets_values[0];
-      // 只有当第一个值看起来像文件名时才添加
+      // Only add if first value looks like file name
       if (
         firstValue &&
         typeof firstValue === "string" &&
@@ -512,54 +512,54 @@ function createNodeCard(nodeInfo) {
         <span class="node-id">ID: ${node.id}</span>
     `;
 
-  // 添加可编辑的模型路径容器
+  // Add editable model path container
   const modelPathContainer = document.createElement("div");
   modelPathContainer.className = "model-path-container";
 
-  // 创建模型路径输入框
+  // Create model path input
   const modelPathInput = document.createElement("input");
   modelPathInput.className = "model-path-input";
-  modelPathInput.value = modelFiles[0]; // 使用完整原始路径
-  modelPathInput.title = "编辑此路径将更新 JSON 中的 widgets_values";
+  modelPathInput.value = modelFiles[0]; // Use full original path
+  modelPathInput.title = "Edit this path to update widgets_values in JSON";
 
-  // 修改事件监听器，考虑节点类型
+  // Modify event listener to consider node type
   modelPathInput.addEventListener("input", (e) => {
     const newValue = e.target.value;
 
-    // 直接更新状态，无需依赖其他函数
+    // Update status directly without relying on other functions
     const hasPath = newValue.includes("/") || newValue.includes("\\");
     const hasValidExtension = isValidModelExtension(newValue, node.type);
 
-    // 移除所有现有指示器
+    // Remove all existing indicators
     const existingIndicators =
       modelPathContainer.querySelectorAll(".path-indicator");
     existingIndicators.forEach((indicator) => {
       modelPathContainer.removeChild(indicator);
     });
 
-    // 创建新指示器
+    // Create new indicator
     const indicator = document.createElement("span");
 
     if (!hasValidExtension) {
       indicator.className = "path-indicator invalid-extension";
       indicator.title = hasPath
-        ? "无效的文件格式 (应为 .safetensors 或 .sft) 且包含文件夹路径"
-        : "无效的文件格式 (应为 .safetensors 或 .sft)";
+        ? "Invalid file format (should be .safetensors or .sft) and contains folder path"
+        : "Invalid file format (should be .safetensors or .sft)";
     } else if (hasPath) {
       indicator.className = "path-indicator path-warning";
-      indicator.title = "包含文件夹路径";
+      indicator.title = "Contains folder path";
     } else {
       indicator.className = "path-indicator valid-extension";
-      indicator.title = "有效的模型文件格式";
+      indicator.title = "Valid model file format";
     }
 
     modelPathContainer.appendChild(indicator);
 
-    // 更新 widgets_values 和其他状态
+    // Update widgets_values and other states
     updateWidgetsValue(node.id, modelFiles[0], newValue);
   });
 
-  // 添加 blur 事件，以确保失焦时状态一定会更新
+  // Add blur event to ensure state updates when focus is lost
   modelPathInput.addEventListener("blur", (e) => {
     const newValue = e.target.value;
     updatePathWarningStatus(modelPathContainer, newValue, node.type);
@@ -567,14 +567,14 @@ function createNodeCard(nodeInfo) {
 
   modelPathContainer.appendChild(modelPathInput);
 
-  // 初始状态设置
+  // Set initial state
   updatePathWarningStatus(modelPathContainer, modelFiles[0], node.type);
 
   // Node body content
   const body = document.createElement("div");
   body.className = "node-body";
 
-  // 添加模型路径容器到卡片头部或正文顶部
+  // Add model path container to card header or body top
   body.appendChild(modelPathContainer);
 
   // Add empty property warning (if needed)
@@ -591,20 +591,20 @@ function createNodeCard(nodeInfo) {
     body.appendChild(warningDiv);
   }
 
-  // 移除原来的文件列表显示，因为已经有了可编辑的输入框
-  // 如果有多个模型文件，仍然保留文件列表，但主文件已在顶部输入框中
+  // Remove original file list display since we have editable input
+  // If there are multiple model files, keep file list but main file is already in top input
   if (modelFiles.length > 1) {
     const fileListDiv = document.createElement("div");
     fileListDiv.className = "file-list";
 
     const fileListTitle = document.createElement("div");
     fileListTitle.className = "file-list-title";
-    fileListTitle.innerHTML = `<strong>其他模型文件 (${
+    fileListTitle.innerHTML = `<strong>Other Model Files (${
       modelFiles.length - 1
     }):</strong>`;
     fileListDiv.appendChild(fileListTitle);
 
-    // 添加除了主文件以外的其他文件
+    // Add other files besides main file
     for (let i = 1; i < modelFiles.length; i++) {
       const fileNameDiv = document.createElement("div");
       fileNameDiv.className = "file-name";
@@ -614,7 +614,7 @@ function createNodeCard(nodeInfo) {
 
       fileNameDiv.innerHTML = `<span class="file-index">${i}.</span> ${originalPath} ${
         hasPath
-          ? '<span class="path-warning" title="包含文件夹路径"></span>'
+          ? '<span class="path-warning" title="Contains folder path"></span>'
           : ""
       }`;
       fileListDiv.appendChild(fileNameDiv);
@@ -1052,20 +1052,20 @@ function highlightDirectoryField(nodeId, modelName) {
 
 // Validate model name
 function updateNameValidation(inputValue, fileName, validationElement) {
-  // 清除当前状态
+  // Clear current status
   validationElement.className = "validation-status";
 
-  // 重新检查名称是否有效
+  // Re-check if name is valid
   if (!inputValue) {
     validationElement.classList.add("invalid");
-    validationElement.title = "模型名称不能为空";
+    validationElement.title = "Model name cannot be empty";
     return false;
   }
 
-  // 检查文件名是否有效
+  // Check if file name is valid
   const isFileNameValid = isValidModelExtension(fileName, null);
 
-  // 如果文件名有效，检查模型名称与基本文件名是否匹配
+  // If file name is valid, check if model name matches base file name
   if (isFileNameValid) {
     const baseFileName = fileName.split(/[\\\/]/).pop();
     const normalizedInput = inputValue.toLowerCase().replace(/[-_\.]/g, "");
@@ -1080,17 +1080,17 @@ function updateNameValidation(inputValue, fileName, validationElement) {
       normalizedFileName.includes(normalizedInput)
     ) {
       validationElement.classList.add("valid");
-      validationElement.title = "模型名称与文件名匹配";
+      validationElement.title = "Model name matches file name";
       return true;
     } else {
       validationElement.classList.add("invalid");
-      validationElement.title = "模型名称与文件名不匹配";
+      validationElement.title = "Model name does not match file name";
       return false;
     }
   } else {
-    // 如果文件名无效（没有.safetensors或.sft后缀），名称验证也应为无效
+    // If file name is invalid (no .safetensors or .sft suffix), name validation should also be invalid
     validationElement.classList.add("invalid");
-    validationElement.title = "模型文件格式无效，无法验证名称";
+    validationElement.title = "Model file format is invalid, cannot validate name";
     return false;
   }
 }
@@ -1554,16 +1554,16 @@ function findMatchingModelEntry(fileName, modelMap) {
   return null;
 }
 
-// 修改 isValidModelExtension 函数，考虑节点类型
+// Modified isValidModelExtension function, considering node type
 function isValidModelExtension(filePath, nodeType) {
   if (!filePath) return false;
 
-  // 首先检查文件扩展名
+  // First check file extension
   const lowerPath = filePath.toLowerCase();
   const hasValidExtension =
     lowerPath.endsWith(".safetensors") || lowerPath.endsWith(".sft");
 
-  // 如果指定了节点类型且在规则中，即使扩展名不对也视为有效
+  // If node type is specified and in rules, consider valid even if extension is wrong
   if (nodeType && directoryRules.hasOwnProperty(nodeType)) {
     return true;
   }
@@ -1571,11 +1571,11 @@ function isValidModelExtension(filePath, nodeType) {
   return hasValidExtension;
 }
 
-// 修改 updatePathWarningStatus 函数，考虑节点类型
+// Modified updatePathWarningStatus function, considering node type
 function updatePathWarningStatus(container, filePath, nodeType) {
   if (!container) return;
 
-  // 先移除所有现有指示器
+  // First remove all existing indicators
   const existingIndicators = container.querySelectorAll(
     ".path-indicator, .path-warning"
   );
@@ -1583,46 +1583,46 @@ function updatePathWarningStatus(container, filePath, nodeType) {
     container.removeChild(indicator);
   });
 
-  // 检查路径和扩展名，考虑节点类型
+  // Check path and extension, considering node type
   const hasPath = filePath.includes("/") || filePath.includes("\\");
   const hasValidExtension = isValidModelExtension(filePath, nodeType);
 
-  // 创建新指示器
+  // Create new indicator
   const indicator = document.createElement("span");
 
   if (!hasValidExtension) {
-    // 无效扩展名优先级最高，显示红色
+    // Invalid extension has highest priority, show red
     indicator.className = "path-indicator invalid-extension";
     indicator.title = hasPath
-      ? "无效的文件格式 (应为 .safetensors 或 .sft) 且包含文件夹路径"
-      : "无效的文件格式 (应为 .safetensors 或 .sft)";
+      ? "Invalid file format (should be .safetensors or .sft) and contains folder path"
+      : "Invalid file format (should be .safetensors or .sft)";
   } else if (hasPath) {
-    // 有效扩展名但有路径，显示黄色
+    // Valid extension but has path, show yellow
     indicator.className = "path-indicator path-warning";
-    indicator.title = "包含文件夹路径";
+    indicator.title = "Contains folder path";
   } else {
-    // 有效扩展名且无路径，显示绿色
+    // Valid extension and no path, show green
     indicator.className = "path-indicator valid-extension";
-    indicator.title = "有效的模型文件格式";
+    indicator.title = "Valid model file format";
   }
 
   container.appendChild(indicator);
 
-  // 更新无效模型列表
+  // Update invalid models list
   setTimeout(() => {
     updateInvalidModelsList();
   }, 10);
 }
 
-// 修改 updateWidgetsValue 函数，确保模型名称验证状态完全更新
+// Modified updateWidgetsValue function, ensuring model name validation status is fully updated
 function updateWidgetsValue(nodeId, oldValue, newValue) {
   if (!parsedJson) return;
 
-  // 找到对应的节点
+  // Find the corresponding node
   const node = parsedJson.nodes.find((n) => n.id === nodeId);
   if (!node || !node.widgets_values) return;
 
-  // 查找并更新 widgets_values 中的值
+  // Find and update the value in widgets_values
   let updated = false;
   for (let i = 0; i < node.widgets_values.length; i++) {
     if (node.widgets_values[i] === oldValue) {
@@ -1632,26 +1632,26 @@ function updateWidgetsValue(nodeId, oldValue, newValue) {
     }
   }
 
-  // 如果没有实际更新，则返回
+  // If no actual update, return
   if (!updated) return;
 
-  // 更新 JSON 文本区域
+  // Update JSON text area
   const formattedJson = JSON.stringify(parsedJson, null, 2);
   jsonInput.value = formattedJson;
   updateLineNumbers();
 
-  // 重新查找节点位置
+  // Re-find node positions
   findNodePositions(formattedJson);
 
-  // 同步更新编辑区
+  // Synchronously update edit area
   const nodeInfo = nodesToEdit.find((info) => info.node.id === nodeId);
   if (nodeInfo) {
-    // 更新 modelFiles 数组中对应的值
+    // Update corresponding value in modelFiles array
     const index = nodeInfo.modelFiles.indexOf(oldValue);
     if (index !== -1) {
       nodeInfo.modelFiles[index] = newValue;
 
-      // 更新指示器状态
+      // Update indicator status
       const modelPathContainer = document.querySelector(
         `.node-card[data-node-id="${nodeId}"] .model-path-container`
       );
@@ -1663,10 +1663,10 @@ function updateWidgetsValue(nodeId, oldValue, newValue) {
         );
       }
 
-      // 提取新的基本文件名（不含路径）
+      // Extract new base file name (without path)
       const newBaseName = newValue.split(/[\\\/]/).pop();
 
-      // 更新相关的模型条目验证状态
+      // Update related model entry validation status
       const modelsContainer = document.querySelector(
         `.models-container[data-node-id="${nodeId}"]`
       );
@@ -1682,16 +1682,16 @@ function updateWidgetsValue(nodeId, oldValue, newValue) {
           );
 
           if (nameInput && validationElement) {
-            // 强制重新验证 - 不只是更新验证结果
-            // 这是关键修复：无论当前状态如何，都强制重新验证
+            // Force re-validation - not just update validation result
+            // This is the key fix: force re-validation regardless of current state
             nameInput.dispatchEvent(new Event("input"));
           }
         });
       }
 
-      // 检查是否需要更新第一个模型条目的名称（如果它是基于文件名创建的）
+      // Check if need to update first model entry name (if it was created based on file name)
       if (index === 0) {
-        // 如果是主文件被修改
+        // If main file was modified
         const firstModelEntry = document.querySelector(
           `.models-container[data-node-id="${nodeId}"] .model-entry:first-child`
         );
@@ -1699,11 +1699,11 @@ function updateWidgetsValue(nodeId, oldValue, newValue) {
           const nameInput = firstModelEntry.querySelector(
             ".form-group:nth-child(1) input"
           );
-          // 如果当前名称与旧的基本文件名相同，则更新为新的文件名
+          // If current name matches old base file name, update to new file name
           const oldBaseName = oldValue.split(/[\\\/]/).pop();
           if (nameInput && nameInput.value === oldBaseName) {
             nameInput.value = newBaseName;
-            // 触发验证更新
+            // Trigger validation update
             nameInput.dispatchEvent(new Event("input"));
           }
         }
@@ -1711,26 +1711,26 @@ function updateWidgetsValue(nodeId, oldValue, newValue) {
     }
   }
 
-  // 更新统计信息
+  // Update statistics
   updateStats();
 
-  // 更新错误模型列表
+  // Update invalid models list
   updateInvalidModelsList();
 
-  // 添加: 验证所有模型配置
+  // Add: validate all model configurations
   validateAllModels();
 }
 
-// 修改错误模型列表生成函数
+// Modified invalid models list generation function
 function updateInvalidModelsList() {
-  // 查找或创建错误模型面板
+  // Find or create invalid models panel
   let invalidModelsPanel = document.getElementById("invalidModelsPanel");
   if (!invalidModelsPanel) {
     invalidModelsPanel = document.createElement("div");
     invalidModelsPanel.id = "invalidModelsPanel";
     invalidModelsPanel.className = "invalid-models-panel";
 
-    // 将面板插入到统计面板后面
+    // Insert panel after stats panel
     const statsPanel = document.getElementById("statsPanel");
     if (statsPanel && statsPanel.parentNode) {
       statsPanel.parentNode.insertBefore(
@@ -1740,23 +1740,23 @@ function updateInvalidModelsList() {
     }
   }
 
-  // 收集所有无效模型文件
+  // Collect all invalid model files
   const invalidModels = [];
   for (const nodeInfo of nodesToEdit) {
     const { node, modelFiles } = nodeInfo;
 
     for (const filePath of modelFiles) {
-      // 考虑节点类型
+      // Consider node type
       if (!isValidModelExtension(filePath, node.type)) {
         invalidModels.push({ nodeId: node.id, nodeName: node.type, filePath });
       }
     }
   }
 
-  // 更新面板内容
+  // Update panel content
   if (invalidModels.length > 0) {
     invalidModelsPanel.innerHTML = `
-      <h3>无效的模型文件 <span class="badge">${invalidModels.length}</span></h3>
+      <h3>Invalid Model Files <span class="badge">${invalidModels.length}</span></h3>
       <div class="invalid-models-list">
         ${invalidModels
           .map(
@@ -1770,30 +1770,30 @@ function updateInvalidModelsList() {
       </div>
     `;
 
-    // 添加点击事件
+    // Add click events
     invalidModelsPanel
       .querySelectorAll(".invalid-model-link")
       .forEach((link) => {
         link.addEventListener("click", () => {
           const nodeId = link.dataset.nodeId;
-          // 滚动到对应节点
+          // Scroll to corresponding node
           scrollToNode(nodeId);
 
-          // 高亮对应卡片
+          // Highlight corresponding card
           const targetCard = document.querySelector(
             `.node-card[data-node-id="${nodeId}"]`
           );
           if (targetCard) {
-            // 移除其他卡片的高亮
+            // Remove highlight from other cards
             document.querySelectorAll(".node-card").forEach((card) => {
               card.classList.remove("highlight-error");
             });
 
-            // 添加高亮并滚动到视图
+            // Add highlight and scroll to view
             targetCard.classList.add("highlight-error");
             targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
 
-            // 稍后移除高亮
+            // Remove highlight later
             setTimeout(() => {
               targetCard.classList.remove("highlight-error");
             }, 2000);
@@ -1807,9 +1807,9 @@ function updateInvalidModelsList() {
   }
 }
 
-// 修改 validateAllModels 函数，添加名称与URL匹配检查
+// Modified validateAllModels function, adding name and URL matching check
 function validateAllModels() {
-  // 重置状态
+  // Reset status
   validationStatus = {
     hasErrors: false,
     hasWarnings: false,
@@ -1823,34 +1823,34 @@ function validateAllModels() {
     return;
   }
 
-  // 遍历所有节点
+  // Iterate through all nodes
   for (const nodeInfo of nodesToEdit) {
     const { node, modelFiles, isNodeTypeInRules } = nodeInfo;
 
-    // 跳过非模型节点
+    // Skip non-model nodes
     if (!isNodeTypeInRules) continue;
 
-    // 检查节点是否有模型配置
+    // Check if node has model configuration
     const hasModelsProperty =
       node.properties && Array.isArray(node.properties.models);
 
-    // 找出符合格式要求的文件名
+    // Find files that meet format requirements
     const validModelFiles = modelFiles.filter((file) => {
-      return isValidModelExtension(file, null); // 仅检查文件扩展名，不考虑节点类型
+      return isValidModelExtension(file, null); // Only check file extension, not considering node type
     });
 
-    // 1. 检查模型数量是否匹配
+    // 1. Check if model count matches
     if (hasModelsProperty) {
       if (validModelFiles.length !== node.properties.models.length) {
         validationStatus.hasWarnings = true;
         console.warn(
-          `模型数量不匹配: 节点 ${node.id} (${node.type}) 有 ${validModelFiles.length} 个有效模型文件，但有 ${node.properties.models.length} 个模型配置`
+          `Model count mismatch: Node ${node.id} (${node.type}) has ${validModelFiles.length} valid model files, but has ${node.properties.models.length} model configurations`
         );
       }
 
-      // 2. 检查每个模型配置
+      // 2. Check each model configuration
       for (const model of node.properties.models) {
-        // 检查模型名称是否在 widgets_values 中
+        // Check if model name is in widgets_values
         const modelNameInWidgets = modelFiles.some((file) => {
           const fileName = file.split(/[\\\/]/).pop();
           return fileName === model.name || file === model.name;
@@ -1859,11 +1859,11 @@ function validateAllModels() {
         if (!modelNameInWidgets) {
           validationStatus.hasWarnings = true;
           console.warn(
-            `模型名称不匹配: 节点 ${node.id} (${node.type}) 中的模型 "${model.name}" 未在 widgets_values 中找到`
+            `Model name mismatch: Model "${model.name}" in node ${node.id} (${node.type}) not found in widgets_values`
           );
         }
 
-        // 检查模型文件格式
+        // Check model file format
         const hasValidExtension =
           model.name.toLowerCase().endsWith(".safetensors") ||
           model.name.toLowerCase().endsWith(".sft");
@@ -1872,11 +1872,11 @@ function validateAllModels() {
           validationStatus.hasErrors = true;
           validationStatus.formatErrors++;
           console.error(
-            `模型文件格式错误: 节点 ${node.id} (${node.type}) 中的模型 "${model.name}" 不是 .safetensors 或 .sft 格式`
+            `Model file format error: Model "${model.name}" in node ${node.id} (${node.type}) is not .safetensors or .sft format`
           );
         }
 
-        // 检查模型URL
+        // Check model URL
         if (!model.url || model.url.trim() === "") {
           validationStatus.hasWarnings = true;
           validationStatus.missingLinks++;
@@ -1884,20 +1884,20 @@ function validateAllModels() {
           validationStatus.hasWarnings = true;
           validationStatus.invalidLinks++;
         } else {
-          // 新增：检查模型名称是否包含在URL中
+          // New: Check if model name is contained in URL
           const modelNameWithoutExt = model.name.replace(
             /\.(safetensors|sft)$/i,
             ""
           );
-          const modelNameBase = modelNameWithoutExt.split(/[_\-\.]/)[0]; // 获取基础名称（第一部分）
+          const modelNameBase = modelNameWithoutExt.split(/[_\-\.]/)[0]; // Get base name (first part)
 
-          // 解码URL以便进行比较
+          // Decode URL for comparison
           const decodedUrl = decodeURIComponent(model.url);
 
-          // 首先尝试完整匹配
+          // First try full match
           const nameInUrl = decodedUrl.includes(model.name);
 
-          // 如果完整匹配失败，尝试基础名称匹配
+          // If full match fails, try base name match
           const baseNameInUrl =
             !nameInUrl &&
             modelNameBase.length > 3 &&
@@ -1907,35 +1907,35 @@ function validateAllModels() {
             validationStatus.hasWarnings = true;
             validationStatus.urlMismatch++;
             console.warn(
-              `模型名称未包含在URL中: 节点 ${node.id} (${node.type}) 中的模型 "${model.name}" 的URL不包含模型名称`
+              `Model name not contained in URL: Model "${model.name}" in node ${node.id} (${node.type}) URL does not contain model name`
             );
           }
         }
       }
     } else if (validModelFiles.length > 0) {
-      // 3. 如果节点有有效模型文件但没有模型配置
+      // 3. If node has valid model files but no model configuration
       validationStatus.hasWarnings = true;
       validationStatus.missingLinks += validModelFiles.length;
       console.warn(
-        `缺少模型配置: 节点 ${node.id} (${node.type}) 有 ${validModelFiles.length} 个有效模型文件，但没有模型配置`
+        `Missing model configuration: Node ${node.id} (${node.type}) has ${validModelFiles.length} valid model files, but no model configuration`
       );
     }
   }
 
-  // 更新按钮状态
+  // Update button status
   updateButtonsStatus();
 }
 
-// 修改更新按钮状态函数，直接显示验证信息
+// Modified button status update function, directly display validation info
 function updateButtonsStatus() {
-  // 更新复制和保存按钮的状态
+  // Update copy and save button status
   const copyBtn = document.getElementById("copyBtn");
   const saveBtn = document.getElementById("saveBtn");
 
-  // 获取验证信息显示元素
+  // Get validation info display element
   const validationInfoElement = document.getElementById("validation-info");
 
-  // 移除旧的状态类
+  // Remove old status classes
   copyBtn.classList.remove("status-success", "status-warning", "status-error");
   saveBtn.classList.remove("status-success", "status-warning", "status-error");
   validationInfoElement.classList.remove(
@@ -1944,32 +1944,32 @@ function updateButtonsStatus() {
     "info-error"
   );
 
-  // 构建验证信息内容
+  // Build validation info content
   let validationMessage = "";
 
-  // 添加新的状态类和信息
+  // Add new status classes and info
   if (validationStatus.hasErrors) {
     copyBtn.classList.add("status-error");
     saveBtn.classList.add("status-error");
     validationInfoElement.classList.add("info-error");
 
-    validationMessage = `<span class="validation-icon">❌</span> 有 ${validationStatus.formatErrors} 个模型格式错误`;
+    validationMessage = `<span class="validation-icon">❌</span> ${validationStatus.formatErrors} model format errors`;
   } else if (validationStatus.hasWarnings) {
     copyBtn.classList.add("status-warning");
     saveBtn.classList.add("status-warning");
     validationInfoElement.classList.add("info-warning");
 
-    validationMessage = `<span class="validation-icon">⚠️</span> 警告: `;
+    validationMessage = `<span class="validation-icon">⚠️</span> Warning: `;
 
     const warningItems = [];
     if (validationStatus.missingLinks > 0) {
-      warningItems.push(`${validationStatus.missingLinks} 个缺失链接`);
+      warningItems.push(`${validationStatus.missingLinks} missing links`);
     }
     if (validationStatus.invalidLinks > 0) {
-      warningItems.push(`${validationStatus.invalidLinks} 个无效链接`);
+      warningItems.push(`${validationStatus.invalidLinks} invalid links`);
     }
     if (validationStatus.urlMismatch > 0) {
-      warningItems.push(`${validationStatus.urlMismatch} 个名称与URL不匹配`);
+      warningItems.push(`${validationStatus.urlMismatch} name-URL mismatches`);
     }
 
     validationMessage += warningItems.join(", ");
@@ -1978,16 +1978,16 @@ function updateButtonsStatus() {
     saveBtn.classList.add("status-success");
     validationInfoElement.classList.add("info-success");
 
-    validationMessage = `<span class="validation-icon">✅</span> 所有模型配置有效`;
+    validationMessage = `<span class="validation-icon">✅</span> All model configurations valid`;
   } else {
-    // 没有加载任何JSON或没有模型节点
-    validationMessage = ""; // 不显示任何验证信息
+    // No JSON loaded or no model nodes
+    validationMessage = ""; // Display no validation info
   }
 
-  // 更新验证信息显示
+  // Update validation info display
   validationInfoElement.innerHTML = validationMessage;
 
-  // 仍然保留title提示，以便显示更详细信息
+  // Still keep title tooltips for more detailed info
   copyBtn.title = validationMessage.replace(/<[^>]*>/g, "");
   saveBtn.title = validationMessage.replace(/<[^>]*>/g, "");
 }
