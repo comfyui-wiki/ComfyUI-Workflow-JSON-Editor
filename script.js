@@ -1,14 +1,26 @@
 // Define default directory rules
 let directoryRules = {
   CheckpointLoaderSimple: "checkpoints",
-  ControlNetLoader: "control_models",
-  VAELoader: "vae",
-  UpscaleModelLoader: "upscale_models",
+  CheckpointLoader: "checkpoints",
+  ControlNetLoader: "controlnet",
+  CLIPLoader: "text_encoders",
   CLIPVisionLoader: "clip_vision",
+  DiffusersLoader: "diffusers",
+  DualCLIPLoader: "text_encoders",
+  DiffControlNetLoader: "controlnet",
+  GLIGENLoader: "gligen",
+  ImageOnlyCheckpointLoader: "checkpoints",
   LoraLoader: "loras",
   LoraLoaderModelOnly: "loras",
-  ImageOnlyCheckpointLoader: "checkpoints",
+  PhotoMakerLoader: "photomaker",
   QuadrupleCLIPLoader: "text_encoders",
+  StyleModelLoader: "style_models",
+  TripleCLIPLoader: "text_encoders",
+  UpscaleModelLoader: "upscale_models",
+  unCLIPCheckpointLoader: "checkpoints",
+  UNETLoader: "diffusion_models",
+  VAELoader: "vae",
+  ImageOnlyCheckpointLoader: "checkpoints",
 };
 
 // DOM element references
@@ -40,6 +52,16 @@ let parsedJson = null;
 let nodesToEdit = [];
 // Store node positions in JSON
 let nodePositions = {};
+
+// Add global status variables
+let validationStatus = {
+  hasErrors: false,
+  hasWarnings: false,
+  missingLinks: 0,
+  invalidLinks: 0,
+  formatErrors: 0,
+  urlMismatch: 0,
+};
 
 // Initialize the page
 function initPage() {
@@ -91,6 +113,18 @@ function initPage() {
   clearBulkLinks.addEventListener("click", () => {
     bulkLinksInput.value = "";
   });
+
+  // Create validation status display area
+  const actionsContainer = document.querySelector(".actions");
+  if (actionsContainer) {
+    const validationInfoElement = document.createElement("div");
+    validationInfoElement.id = "validation-info";
+    validationInfoElement.className = "validation-info";
+    actionsContainer.parentNode.insertBefore(
+      validationInfoElement,
+      actionsContainer.nextSibling
+    );
+  }
 }
 
 // Sync the scroll of the text area and line numbers
@@ -204,7 +238,13 @@ function parseJsonData() {
     // Update statistics
     updateStats();
 
-    showMessage("JSON parsed successfully");
+    // Find and display invalid model files at the top
+    updateInvalidModelsList();
+
+    // Add: validate all model configurations
+    validateAllModels();
+
+    // showMessage("JSON parsed successfully");
   } catch (error) {
     nodesContainer.innerHTML = `
       <div class="error">
@@ -326,25 +366,48 @@ function findNodesToEdit(nodes) {
       continue;
     }
 
-    // Check if it is a model loader node - must have "Node name for S&R" property in properties
+    // Check if this is a model loader node - must have "Node name for S&R" property
     const isModelLoaderNode =
       node.properties && node.properties["Node name for S&R"];
     if (!isModelLoaderNode) {
       continue;
     }
 
-    // Check if there are .safetensors or .sft files in widget_values
+    // Check if node type is in directoryRules
+    const isNodeTypeInRules =
+      node.type && directoryRules.hasOwnProperty(node.type);
+
+    // Check if widget_values contains possible model files
     const modelFiles = [];
     for (const value of node.widgets_values) {
-      if (
-        value &&
-        typeof value === "string" &&
-        (value.includes(".safetensors") || value.includes(".sft"))
-      ) {
-        modelFiles.push(value);
+      if (value && typeof value === "string") {
+        // First check if contains dot - basic requirement for file names
+        const containsDot = value.includes(".");
+
+        // Check if has model file suffix
+        const hasSafetensorsExt = value.toLowerCase().includes(".safetensors");
+        const hasSftExt = value.toLowerCase().includes(".sft");
+        const hasValidExt = hasSafetensorsExt || hasSftExt;
+
+        // Check if is valid file name (not "default" or other common config values)
+        const isValidFileName =
+          containsDot &&
+          !/^(default|none|empty|null|undefined|clip|checkpoint|controlnet|diffusers|lora|vae)$/i.test(
+            value
+          );
+
+        // If has valid model file suffix, add as model file
+        if (hasValidExt) {
+          modelFiles.push(value);
+        }
+        // If node type is in known model node list and looks like valid file name, also add
+        else if (isNodeTypeInRules && isValidFileName && value.trim() !== "") {
+          modelFiles.push(value);
+        }
       }
     }
 
+    // Add node if any condition is met
     if (modelFiles.length > 0) {
       result.push({
         node,
@@ -352,9 +415,34 @@ function findNodesToEdit(nodes) {
           node.properties && node.properties.models
             ? [...node.properties.models]
             : [],
-        modelFiles: modelFiles, // Store all model files
-        fileName: modelFiles[0].split("\\").pop(), // Compatible with old code, keep the first file name
+        modelFiles: modelFiles,
+        fileName:
+          modelFiles.length > 0 ? modelFiles[0].split(/[\\\/]/).pop() : "",
+        isNodeTypeInRules: isNodeTypeInRules,
       });
+    }
+    // For nodes with no model files found but node type is in rules, also add them but check if first value might be file
+    else if (isNodeTypeInRules && node.widgets_values.length > 0) {
+      const firstValue = node.widgets_values[0];
+      // Only add if first value looks like file name
+      if (
+        firstValue &&
+        typeof firstValue === "string" &&
+        firstValue.includes(".") &&
+        firstValue.trim() !== ""
+      ) {
+        modelFiles.push(firstValue);
+        result.push({
+          node,
+          existingModels:
+            node.properties && node.properties.models
+              ? [...node.properties.models]
+              : [],
+          modelFiles: [firstValue],
+          fileName: firstValue.split(/[\\\/]/).pop(),
+          isNodeTypeInRules: isNodeTypeInRules,
+        });
+      }
     }
   }
 
@@ -369,7 +457,7 @@ function getModelFileName(values) {
       typeof value === "string" &&
       (value.includes(".safetensors") || value.includes(".sft"))
     ) {
-      return value.split("\\").pop();
+      return value.split(/[\\\/]/).pop();
     }
   }
   return "";
@@ -396,7 +484,8 @@ function renderNodeEditor() {
 
 // Create node card
 function createNodeCard(nodeInfo) {
-  const { node, existingModels, modelFiles, fileName } = nodeInfo;
+  const { node, existingModels, modelFiles, fileName, isNodeTypeInRules } =
+    nodeInfo;
 
   const card = document.createElement("div");
   card.className = "node-card";
@@ -423,9 +512,70 @@ function createNodeCard(nodeInfo) {
         <span class="node-id">ID: ${node.id}</span>
     `;
 
+  // Add editable model path container
+  const modelPathContainer = document.createElement("div");
+  modelPathContainer.className = "model-path-container";
+
+  // Create model path input
+  const modelPathInput = document.createElement("input");
+  modelPathInput.className = "model-path-input";
+  modelPathInput.value = modelFiles[0]; // Use full original path
+  modelPathInput.title = "Edit this path to update widgets_values in JSON";
+
+  // Modify event listener to consider node type
+  modelPathInput.addEventListener("input", (e) => {
+    const newValue = e.target.value;
+
+    // Update status directly without relying on other functions
+    const hasPath = newValue.includes("/") || newValue.includes("\\");
+    const hasValidExtension = isValidModelExtension(newValue, node.type);
+
+    // Remove all existing indicators
+    const existingIndicators =
+      modelPathContainer.querySelectorAll(".path-indicator");
+    existingIndicators.forEach((indicator) => {
+      modelPathContainer.removeChild(indicator);
+    });
+
+    // Create new indicator
+    const indicator = document.createElement("span");
+
+    if (!hasValidExtension) {
+      indicator.className = "path-indicator invalid-extension";
+      indicator.title = hasPath
+        ? "Invalid file format (should be .safetensors or .sft) and contains folder path"
+        : "Invalid file format (should be .safetensors or .sft)";
+    } else if (hasPath) {
+      indicator.className = "path-indicator path-warning";
+      indicator.title = "Contains folder path";
+    } else {
+      indicator.className = "path-indicator valid-extension";
+      indicator.title = "Valid model file format";
+    }
+
+    modelPathContainer.appendChild(indicator);
+
+    // Update widgets_values and other states
+    updateWidgetsValue(node.id, modelFiles[0], newValue);
+  });
+
+  // Add blur event to ensure state updates when focus is lost
+  modelPathInput.addEventListener("blur", (e) => {
+    const newValue = e.target.value;
+    updatePathWarningStatus(modelPathContainer, newValue, node.type);
+  });
+
+  modelPathContainer.appendChild(modelPathInput);
+
+  // Set initial state
+  updatePathWarningStatus(modelPathContainer, modelFiles[0], node.type);
+
   // Node body content
   const body = document.createElement("div");
   body.className = "node-body";
+
+  // Add model path container to card header or body top
+  body.appendChild(modelPathContainer);
 
   // Add empty property warning (if needed)
   const hasEmptyProperties =
@@ -441,35 +591,37 @@ function createNodeCard(nodeInfo) {
     body.appendChild(warningDiv);
   }
 
-  // Display all model files
-  const fileListDiv = document.createElement("div");
-  fileListDiv.className = "file-list";
-
+  // Remove original file list display since we have editable input
+  // If there are multiple model files, keep file list but main file is already in top input
   if (modelFiles.length > 1) {
-    // If there are multiple model files, add a title
+    const fileListDiv = document.createElement("div");
+    fileListDiv.className = "file-list";
+
     const fileListTitle = document.createElement("div");
     fileListTitle.className = "file-list-title";
-    fileListTitle.innerHTML = `<strong>Detected ${modelFiles.length} model files:</strong>`;
+    fileListTitle.innerHTML = `<strong>Other Model Files (${
+      modelFiles.length - 1
+    }):</strong>`;
     fileListDiv.appendChild(fileListTitle);
 
-    // Add each file
-    for (let i = 0; i < modelFiles.length; i++) {
+    // Add other files besides main file
+    for (let i = 1; i < modelFiles.length; i++) {
       const fileNameDiv = document.createElement("div");
       fileNameDiv.className = "file-name";
-      fileNameDiv.innerHTML = `<span class="file-index">${
-        i + 1
-      }.</span> ${modelFiles[i].split("\\").pop()}`;
+
+      const originalPath = modelFiles[i];
+      const hasPath = originalPath.includes("/") || originalPath.includes("\\");
+
+      fileNameDiv.innerHTML = `<span class="file-index">${i}.</span> ${originalPath} ${
+        hasPath
+          ? '<span class="path-warning" title="Contains folder path"></span>'
+          : ""
+      }`;
       fileListDiv.appendChild(fileNameDiv);
     }
-  } else {
-    // Display single file
-    const fileNameDiv = document.createElement("div");
-    fileNameDiv.className = "file-name";
-    fileNameDiv.textContent = fileName;
-    fileListDiv.appendChild(fileNameDiv);
-  }
 
-  body.appendChild(fileListDiv);
+    body.appendChild(fileListDiv);
+  }
 
   // Model entry container
   const modelsContainer = document.createElement("div");
@@ -491,7 +643,7 @@ function createNodeCard(nodeInfo) {
     // Check for unadded model files
     const existingNames = existingModels.map((model) => model.name);
     const missingFiles = modelFiles
-      .map((file) => file.split("\\").pop())
+      .map((file) => file.split(/[\\\/]/).pop())
       .filter((file) => !existingNames.some((name) => name === file));
 
     // Create entries for each unadded model file
@@ -507,7 +659,7 @@ function createNodeCard(nodeInfo) {
   } else {
     // If there are no existing models, add an empty model entry for each model file
     for (const file of modelFiles) {
-      const fileBaseName = file.split("\\").pop();
+      const fileBaseName = file.split(/[\\\/]/).pop();
       const emptyModel = {
         name: fileBaseName,
         url: "",
@@ -551,14 +703,14 @@ function getClosestFileName(modelName, modelFiles) {
 
   // Try exact match
   for (const file of modelFiles) {
-    const fileName = file.split("\\").pop();
+    const fileName = file.split(/[\\\/]/).pop();
     if (fileName === modelName) {
       return fileName;
     }
   }
 
   // Return the first file name as default
-  return modelFiles[0].split("\\").pop();
+  return modelFiles[0].split(/[\\\/]/).pop();
 }
 
 // Scroll to the node position in JSON
@@ -899,23 +1051,47 @@ function highlightDirectoryField(nodeId, modelName) {
 }
 
 // Validate model name
-function updateNameValidation(name, fileName, validationElement) {
-  // Do not validate if no file name reference is set
-  if (!fileName) {
-    validationElement.className = "validation-status";
-    validationElement.title = "";
-    return;
+function updateNameValidation(inputValue, fileName, validationElement) {
+  // Clear current status
+  validationElement.className = "validation-status";
+
+  // Re-check if name is valid
+  if (!inputValue) {
+    validationElement.classList.add("invalid");
+    validationElement.title = "Model name cannot be empty";
+    return false;
   }
 
-  // Clean the file name (remove path prefix)
-  const cleanFileName = fileName.split("\\").pop();
+  // Check if file name is valid
+  const isFileNameValid = isValidModelExtension(fileName, null);
 
-  if (name === fileName || name === cleanFileName) {
-    validationElement.className = "validation-status valid";
-    validationElement.title = "Model name matches file name";
+  // If file name is valid, check if model name matches base file name
+  if (isFileNameValid) {
+    const baseFileName = fileName.split(/[\\\/]/).pop();
+    const normalizedInput = inputValue.toLowerCase().replace(/[-_\.]/g, "");
+    const normalizedFileName = baseFileName
+      .toLowerCase()
+      .replace(/[-_\.]/g, "")
+      .replace(/\.safetensors$|\.sft$/i, "");
+
+    if (
+      normalizedInput === normalizedFileName ||
+      normalizedInput.includes(normalizedFileName) ||
+      normalizedFileName.includes(normalizedInput)
+    ) {
+      validationElement.classList.add("valid");
+      validationElement.title = "Model name matches file name";
+      return true;
+    } else {
+      validationElement.classList.add("invalid");
+      validationElement.title = "Model name does not match file name";
+      return false;
+    }
   } else {
-    validationElement.className = "validation-status invalid";
-    validationElement.title = "Model name should match file name";
+    // If file name is invalid (no .safetensors or .sft suffix), name validation should also be invalid
+    validationElement.classList.add("invalid");
+    validationElement.title = "Model file format is invalid, cannot validate name";
+    return false;
   }
 }
 
@@ -1376,6 +1552,444 @@ function findMatchingModelEntry(fileName, modelMap) {
   }
 
   return null;
+}
+
+// Modified isValidModelExtension function, considering node type
+function isValidModelExtension(filePath, nodeType) {
+  if (!filePath) return false;
+
+  // First check file extension
+  const lowerPath = filePath.toLowerCase();
+  const hasValidExtension =
+    lowerPath.endsWith(".safetensors") || lowerPath.endsWith(".sft");
+
+  // If node type is specified and in rules, consider valid even if extension is wrong
+  if (nodeType && directoryRules.hasOwnProperty(nodeType)) {
+    return true;
+  }
+
+  return hasValidExtension;
+}
+
+// Modified updatePathWarningStatus function, considering node type
+function updatePathWarningStatus(container, filePath, nodeType) {
+  if (!container) return;
+
+  // First remove all existing indicators
+  const existingIndicators = container.querySelectorAll(
+    ".path-indicator, .path-warning"
+  );
+  existingIndicators.forEach((indicator) => {
+    container.removeChild(indicator);
+  });
+
+  // Check path and extension, considering node type
+  const hasPath = filePath.includes("/") || filePath.includes("\\");
+  const hasValidExtension = isValidModelExtension(filePath, nodeType);
+
+  // Create new indicator
+  const indicator = document.createElement("span");
+
+  if (!hasValidExtension) {
+    // Invalid extension has highest priority, show red
+    indicator.className = "path-indicator invalid-extension";
+    indicator.title = hasPath
+      ? "Invalid file format (should be .safetensors or .sft) and contains folder path"
+      : "Invalid file format (should be .safetensors or .sft)";
+  } else if (hasPath) {
+    // Valid extension but has path, show yellow
+    indicator.className = "path-indicator path-warning";
+    indicator.title = "Contains folder path";
+  } else {
+    // Valid extension and no path, show green
+    indicator.className = "path-indicator valid-extension";
+    indicator.title = "Valid model file format";
+  }
+
+  container.appendChild(indicator);
+
+  // Update invalid models list
+  setTimeout(() => {
+    updateInvalidModelsList();
+  }, 10);
+}
+
+// Modified updateWidgetsValue function, ensuring model name validation status is fully updated
+function updateWidgetsValue(nodeId, oldValue, newValue) {
+  if (!parsedJson) return;
+
+  // Find the corresponding node
+  const node = parsedJson.nodes.find((n) => n.id === nodeId);
+  if (!node || !node.widgets_values) return;
+
+  // Find and update the value in widgets_values
+  let updated = false;
+  for (let i = 0; i < node.widgets_values.length; i++) {
+    if (node.widgets_values[i] === oldValue) {
+      node.widgets_values[i] = newValue;
+      updated = true;
+      break;
+    }
+  }
+
+  // If no actual update, return
+  if (!updated) return;
+
+  // Update JSON text area
+  const formattedJson = JSON.stringify(parsedJson, null, 2);
+  jsonInput.value = formattedJson;
+  updateLineNumbers();
+
+  // Re-find node positions
+  findNodePositions(formattedJson);
+
+  // Synchronously update edit area
+  const nodeInfo = nodesToEdit.find((info) => info.node.id === nodeId);
+  if (nodeInfo) {
+    // Update corresponding value in modelFiles array
+    const index = nodeInfo.modelFiles.indexOf(oldValue);
+    if (index !== -1) {
+      nodeInfo.modelFiles[index] = newValue;
+
+      // Update indicator status
+      const modelPathContainer = document.querySelector(
+        `.node-card[data-node-id="${nodeId}"] .model-path-container`
+      );
+      if (modelPathContainer) {
+        updatePathWarningStatus(
+          modelPathContainer,
+          newValue,
+          nodeInfo.node.type
+        );
+      }
+
+      // Extract new base file name (without path)
+      const newBaseName = newValue.split(/[\\\/]/).pop();
+
+      // Update related model entry validation status
+      const modelsContainer = document.querySelector(
+        `.models-container[data-node-id="${nodeId}"]`
+      );
+      if (modelsContainer) {
+        const modelEntries = modelsContainer.querySelectorAll(".model-entry");
+
+        modelEntries.forEach((entry) => {
+          const nameInput = entry.querySelector(
+            ".form-group:nth-child(1) input"
+          );
+          const validationElement = entry.querySelector(
+            ".form-group:nth-child(1) .validation-status"
+          );
+
+          if (nameInput && validationElement) {
+            // Force re-validation - not just update validation result
+            // This is the key fix: force re-validation regardless of current state
+            nameInput.dispatchEvent(new Event("input"));
+          }
+        });
+      }
+
+      // Check if need to update first model entry name (if it was created based on file name)
+      if (index === 0) {
+        // If main file was modified
+        const firstModelEntry = document.querySelector(
+          `.models-container[data-node-id="${nodeId}"] .model-entry:first-child`
+        );
+        if (firstModelEntry) {
+          const nameInput = firstModelEntry.querySelector(
+            ".form-group:nth-child(1) input"
+          );
+          // If current name matches old base file name, update to new file name
+          const oldBaseName = oldValue.split(/[\\\/]/).pop();
+          if (nameInput && nameInput.value === oldBaseName) {
+            nameInput.value = newBaseName;
+            // Trigger validation update
+            nameInput.dispatchEvent(new Event("input"));
+          }
+        }
+      }
+    }
+  }
+
+  // Update statistics
+  updateStats();
+
+  // Update invalid models list
+  updateInvalidModelsList();
+
+  // Add: validate all model configurations
+  validateAllModels();
+}
+
+// Modified invalid models list generation function
+function updateInvalidModelsList() {
+  // Find or create invalid models panel
+  let invalidModelsPanel = document.getElementById("invalidModelsPanel");
+  if (!invalidModelsPanel) {
+    invalidModelsPanel = document.createElement("div");
+    invalidModelsPanel.id = "invalidModelsPanel";
+    invalidModelsPanel.className = "invalid-models-panel";
+
+    // Insert panel after stats panel
+    const statsPanel = document.getElementById("statsPanel");
+    if (statsPanel && statsPanel.parentNode) {
+      statsPanel.parentNode.insertBefore(
+        invalidModelsPanel,
+        statsPanel.nextSibling
+      );
+    }
+  }
+
+  // Collect all invalid model files
+  const invalidModels = [];
+  for (const nodeInfo of nodesToEdit) {
+    const { node, modelFiles } = nodeInfo;
+
+    for (const filePath of modelFiles) {
+      // Consider node type
+      if (!isValidModelExtension(filePath, node.type)) {
+        invalidModels.push({ nodeId: node.id, nodeName: node.type, filePath });
+      }
+    }
+  }
+
+  // Update panel content
+  if (invalidModels.length > 0) {
+    invalidModelsPanel.innerHTML = `
+      <h3>Invalid Model Files <span class="badge">${invalidModels.length}</span></h3>
+      <div class="invalid-models-list">
+        ${invalidModels
+          .map(
+            (model) => `
+          <div class="invalid-model-link" data-node-id="${model.nodeId}">
+            <span class="node-type">${model.nodeName}</span>: ${model.filePath}
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+
+    // Add click events
+    invalidModelsPanel
+      .querySelectorAll(".invalid-model-link")
+      .forEach((link) => {
+        link.addEventListener("click", () => {
+          const nodeId = link.dataset.nodeId;
+          // Scroll to corresponding node
+          scrollToNode(nodeId);
+
+          // Highlight corresponding card
+          const targetCard = document.querySelector(
+            `.node-card[data-node-id="${nodeId}"]`
+          );
+          if (targetCard) {
+            // Remove highlight from other cards
+            document.querySelectorAll(".node-card").forEach((card) => {
+              card.classList.remove("highlight-error");
+            });
+
+            // Add highlight and scroll to view
+            targetCard.classList.add("highlight-error");
+            targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // Remove highlight later
+            setTimeout(() => {
+              targetCard.classList.remove("highlight-error");
+            }, 2000);
+          }
+        });
+      });
+
+    invalidModelsPanel.style.display = "block";
+  } else {
+    invalidModelsPanel.style.display = "none";
+  }
+}
+
+// Modified validateAllModels function, adding name and URL matching check
+function validateAllModels() {
+  // Reset status
+  validationStatus = {
+    hasErrors: false,
+    hasWarnings: false,
+    missingLinks: 0,
+    invalidLinks: 0,
+    formatErrors: 0,
+    urlMismatch: 0,
+  };
+
+  if (!parsedJson || !parsedJson.nodes || !Array.isArray(parsedJson.nodes)) {
+    return;
+  }
+
+  // Iterate through all nodes
+  for (const nodeInfo of nodesToEdit) {
+    const { node, modelFiles, isNodeTypeInRules } = nodeInfo;
+
+    // Skip non-model nodes
+    if (!isNodeTypeInRules) continue;
+
+    // Check if node has model configuration
+    const hasModelsProperty =
+      node.properties && Array.isArray(node.properties.models);
+
+    // Find files that meet format requirements
+    const validModelFiles = modelFiles.filter((file) => {
+      return isValidModelExtension(file, null); // Only check file extension, not considering node type
+    });
+
+    // 1. Check if model count matches
+    if (hasModelsProperty) {
+      if (validModelFiles.length !== node.properties.models.length) {
+        validationStatus.hasWarnings = true;
+        console.warn(
+          `Model count mismatch: Node ${node.id} (${node.type}) has ${validModelFiles.length} valid model files, but has ${node.properties.models.length} model configurations`
+        );
+      }
+
+      // 2. Check each model configuration
+      for (const model of node.properties.models) {
+        // Check if model name is in widgets_values
+        const modelNameInWidgets = modelFiles.some((file) => {
+          const fileName = file.split(/[\\\/]/).pop();
+          return fileName === model.name || file === model.name;
+        });
+
+        if (!modelNameInWidgets) {
+          validationStatus.hasWarnings = true;
+          console.warn(
+            `Model name mismatch: Model "${model.name}" in node ${node.id} (${node.type}) not found in widgets_values`
+          );
+        }
+
+        // Check model file format
+        const hasValidExtension =
+          model.name.toLowerCase().endsWith(".safetensors") ||
+          model.name.toLowerCase().endsWith(".sft");
+
+        if (!hasValidExtension) {
+          validationStatus.hasErrors = true;
+          validationStatus.formatErrors++;
+          console.error(
+            `Model file format error: Model "${model.name}" in node ${node.id} (${node.type}) is not .safetensors or .sft format`
+          );
+        }
+
+        // Check model URL
+        if (!model.url || model.url.trim() === "") {
+          validationStatus.hasWarnings = true;
+          validationStatus.missingLinks++;
+        } else if (!model.url.includes("http")) {
+          validationStatus.hasWarnings = true;
+          validationStatus.invalidLinks++;
+        } else {
+          // New: Check if model name is contained in URL
+          const modelNameWithoutExt = model.name.replace(
+            /\.(safetensors|sft)$/i,
+            ""
+          );
+          const modelNameBase = modelNameWithoutExt.split(/[_\-\.]/)[0]; // Get base name (first part)
+
+          // Decode URL for comparison
+          const decodedUrl = decodeURIComponent(model.url);
+
+          // First try full match
+          const nameInUrl = decodedUrl.includes(model.name);
+
+          // If full match fails, try base name match
+          const baseNameInUrl =
+            !nameInUrl &&
+            modelNameBase.length > 3 &&
+            decodedUrl.includes(modelNameBase);
+
+          if (!nameInUrl && !baseNameInUrl) {
+            validationStatus.hasWarnings = true;
+            validationStatus.urlMismatch++;
+            console.warn(
+              `Model name not contained in URL: Model "${model.name}" in node ${node.id} (${node.type}) URL does not contain model name`
+            );
+          }
+        }
+      }
+    } else if (validModelFiles.length > 0) {
+      // 3. If node has valid model files but no model configuration
+      validationStatus.hasWarnings = true;
+      validationStatus.missingLinks += validModelFiles.length;
+      console.warn(
+        `Missing model configuration: Node ${node.id} (${node.type}) has ${validModelFiles.length} valid model files, but no model configuration`
+      );
+    }
+  }
+
+  // Update button status
+  updateButtonsStatus();
+}
+
+// Modified button status update function, directly display validation info
+function updateButtonsStatus() {
+  // Update copy and save button status
+  const copyBtn = document.getElementById("copyBtn");
+  const saveBtn = document.getElementById("saveBtn");
+
+  // Get validation info display element
+  const validationInfoElement = document.getElementById("validation-info");
+
+  // Remove old status classes
+  copyBtn.classList.remove("status-success", "status-warning", "status-error");
+  saveBtn.classList.remove("status-success", "status-warning", "status-error");
+  validationInfoElement.classList.remove(
+    "info-success",
+    "info-warning",
+    "info-error"
+  );
+
+  // Build validation info content
+  let validationMessage = "";
+
+  // Add new status classes and info
+  if (validationStatus.hasErrors) {
+    copyBtn.classList.add("status-error");
+    saveBtn.classList.add("status-error");
+    validationInfoElement.classList.add("info-error");
+
+    validationMessage = `<span class="validation-icon">❌</span> ${validationStatus.formatErrors} model format errors`;
+  } else if (validationStatus.hasWarnings) {
+    copyBtn.classList.add("status-warning");
+    saveBtn.classList.add("status-warning");
+    validationInfoElement.classList.add("info-warning");
+
+    validationMessage = `<span class="validation-icon">⚠️</span> Warning: `;
+
+    const warningItems = [];
+    if (validationStatus.missingLinks > 0) {
+      warningItems.push(`${validationStatus.missingLinks} missing links`);
+    }
+    if (validationStatus.invalidLinks > 0) {
+      warningItems.push(`${validationStatus.invalidLinks} invalid links`);
+    }
+    if (validationStatus.urlMismatch > 0) {
+      warningItems.push(`${validationStatus.urlMismatch} name-URL mismatches`);
+    }
+
+    validationMessage += warningItems.join(", ");
+  } else if (parsedJson && nodesToEdit.length > 0) {
+    copyBtn.classList.add("status-success");
+    saveBtn.classList.add("status-success");
+    validationInfoElement.classList.add("info-success");
+
+    validationMessage = `<span class="validation-icon">✅</span> All model configurations valid`;
+  } else {
+    // No JSON loaded or no model nodes
+    validationMessage = ""; // Display no validation info
+  }
+
+  // Update validation info display
+  validationInfoElement.innerHTML = validationMessage;
+
+  // Still keep title tooltips for more detailed info
+  copyBtn.title = validationMessage.replace(/<[^>]*>/g, "");
+  saveBtn.title = validationMessage.replace(/<[^>]*>/g, "");
 }
 
 // Initialize after the page loads

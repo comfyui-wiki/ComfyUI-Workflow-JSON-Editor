@@ -35,6 +35,30 @@ header h1 {
     font-weight: 500;
 }
 
+
+header a {
+    display: flex;
+    align-items: center;
+    color: #fff;
+    text-decoration: none;
+}
+
+header a:hover {
+    color: #ccc;
+}
+
+.header-links {
+    display: flex;
+    gap: 10px;
+}
+
+.editor-icon {
+    width: 20px; /* 根据需要调整图标大小 */
+    height: 20px; /* 根据需要调整图标大小 */
+    margin-right: 5px; /* 图标与文本之间的间距 */
+    vertical-align: middle; /* 使图标与文本垂直对齐 */
+}
+
 .actions {
     display: flex;
     gap: 10px;
@@ -588,4 +612,212 @@ input:focus, textarea:focus {
 
 .json-container .file-name-container span {
     color: #666;
+}
+
+.path-warning {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #ffbc03;
+  background-color: #ffbc03;
+  font-weight: bold;
+  margin-left: 5px;
+  cursor: help;
+}
+
+/* 模型路径输入框样式 */
+.model-path-container {
+  display: flex;
+  align-items: center;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px;
+  margin-bottom: 15px;
+  margin-top: 10px;
+}
+
+.model-path-input {
+  flex: 1;
+  font-family: monospace;
+  color: #2980b9;
+  border: none;
+  background-color: transparent;
+  padding: 5px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.model-path-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+/* 无效扩展名警告样式 */
+.path-warning.invalid-extension {
+  background-color: #e74c3c;
+  color: #e74c3c;
+}
+
+/* 无效模型面板样式 */
+.invalid-models-panel {
+  background-color: #fff3f3;
+  border: 1px solid #ffcdd2;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.invalid-models-panel h3 {
+  margin-top: 0;
+  color: #e53935;
+  display: flex;
+  align-items: center;
+}
+
+.badge {
+  display: inline-block;
+  background-color: #e53935;
+  color: white;
+  font-size: 0.8em;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 10px;
+}
+
+.invalid-models-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.invalid-model-link {
+  padding: 8px;
+  margin: 5px 0;
+  background-color: #fff;
+  border-left: 3px solid #e53935;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.invalid-model-link:hover {
+  background-color: #ffebee;
+}
+
+/* 卡片高亮样式 */
+.node-card.highlight-error {
+  border-color: #e53935;
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.5);
+}
+
+/* 路径指示器通用样式 */
+.path-indicator {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-left: 5px;
+  cursor: help;
+}
+
+/* 有路径警告样式（黄色） */
+.path-indicator.path-warning {
+  background-color: #ffbc03;
+  color: #ffbc03;
+}
+
+/* 无效扩展名样式（红色） */
+.path-indicator.invalid-extension {
+  background-color: #e74c3c;
+  color: #e74c3c;
+}
+
+/* 有效扩展名样式（绿色） */
+.path-indicator.valid-extension {
+  background-color: #2ecc71;
+  color: #2ecc71;
+}
+
+/* 旧的样式保留兼容性 */
+.path-warning {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #ffbc03;
+  background-color: #ffbc03;
+  font-weight: bold;
+  margin-left: 5px;
+  cursor: help;
+}
+
+/* 添加按钮状态样式 */
+.status-success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.status-warning {
+  background-color: #ff9800;
+  color: white;
+}
+
+.status-error {
+  background-color: #f44336;
+  color: white;
+}
+
+/* 鼠标悬停效果 */
+.status-success:hover {
+  background-color: #3e8e41;
+}
+
+.status-warning:hover {
+  background-color: #e68a00;
+}
+
+.status-error:hover {
+  background-color: #d32f2f;
+}
+
+/* 验证信息区域样式 */
+.validation-info {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  min-height: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.info-success {
+  background-color: rgba(76, 175, 80, 0.1);
+  border: 1px solid #4caf50;
+  color: #2e7d32;
+}
+
+.info-warning {
+  background-color: rgba(255, 152, 0, 0.1);
+  border: 1px solid #ff9800;
+  color: #e65100;
+}
+
+.info-error {
+  background-color: rgba(244, 67, 54, 0.1);
+  border: 1px solid #f44336;
+  color: #c62828;
+}
+
+.validation-icon {
+  margin-right: 6px;
+  font-size: 16px;
+  vertical-align: middle;
+}
+
+/* 确保按钮样式仍然有效 */
+.status-success, .status-warning, .status-error {
+  transition: all 0.3s ease;
 } 
