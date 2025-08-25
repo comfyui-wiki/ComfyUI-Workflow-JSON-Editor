@@ -21,7 +21,7 @@ let directoryRules = {
   UNETLoader: "diffusion_models",
   VAELoader: "vae",
   ImageOnlyCheckpointLoader: "checkpoints",
-    ModelPatchLoader: "model_patches",
+  ModelPatchLoader: "model_patches",
 };
 
 // DOM element references
