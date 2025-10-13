@@ -22,6 +22,7 @@ let directoryRules = {
   VAELoader: "vae",
   ImageOnlyCheckpointLoader: "checkpoints",
   ModelPatchLoader: "model_patches",
+  AudioEncoderLoader: "audio_encoders",
 };
 
 // DOM element references
