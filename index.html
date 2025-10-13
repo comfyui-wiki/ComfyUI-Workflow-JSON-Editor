@@ -100,6 +100,38 @@
                     <button id="addDirectoryRule">Add New Rule</button>
                 </div>
                 
+                <!-- MarkdownNote Generator Panel -->
+                <div class="markdown-generator-panel">
+                    <h3>MarkdownNote Generator</h3>
+                    <div class="markdown-settings">
+                        <div class="form-group">
+                            <label for="tutorialUrl">Tutorial URL (optional):</label>
+                            <input type="text" id="tutorialUrl" placeholder="https://docs.comfy.org/tutorials/...">
+                        </div>
+                        <div class="form-group">
+                            <label for="tutorialTitle">Tutorial Title (optional):</label>
+                            <input type="text" id="tutorialTitle" placeholder="Tutorial">
+                        </div>
+                        <div class="panel-actions">
+                            <button id="generateMarkdownBtn" class="primary-btn">Generate MarkdownNote Content</button>
+                            <button id="copyMarkdownBtn" class="secondary-btn" style="display:none;">Copy Content</button>
+                        </div>
+                        <div class="markdown-info">
+                            💡 Generate MarkdownNote content based on your model configurations (will not modify JSON)
+                        </div>
+                        
+                        <!-- Generated Markdown Display Area -->
+                        <div id="markdownDisplay" class="markdown-display" style="display:none;">
+                            <div class="markdown-display-header">
+                                <h4>Generated MarkdownNote Content:</h4>
+                            </div>
+                            <div class="markdown-display-body">
+                                <pre id="markdownContent"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div id="nodesContainer">
                     <!-- Nodes to be edited will be dynamically generated here -->
                     <div class="empty-message">Please parse the JSON data first...</div>

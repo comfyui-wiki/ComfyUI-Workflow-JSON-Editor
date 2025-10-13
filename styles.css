@@ -820,4 +820,179 @@ input:focus, textarea:focus {
 /* 确保按钮样式仍然有效 */
 .status-success, .status-warning, .status-error {
   transition: all 0.3s ease;
-} 
+}
+
+/* MarkdownNote Auto-Generator Panel Styles */
+.markdown-generator-panel {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.markdown-generator-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auto-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.markdown-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.markdown-settings .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.markdown-settings .form-group label {
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+}
+
+.markdown-settings .form-group input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.markdown-settings .form-group input:focus {
+  border-color: #667eea;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.auto-info {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-left: 3px solid #667eea;
+  padding: 12px 15px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #555;
+  margin-top: 5px;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.primary-btn:active {
+  transform: translateY(0);
+}
+
+.secondary-btn {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
+}
+
+.secondary-btn:active {
+  transform: scale(0.98);
+}
+
+.panel-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.markdown-info {
+  background: #f0f7ff;
+  border-left: 3px solid #2196f3;
+  padding: 12px 15px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #555;
+  margin-top: 10px;
+}
+
+/* Markdown Display Area */
+.markdown-display {
+  margin-top: 20px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 20px;
+}
+
+.markdown-display-header {
+  margin-bottom: 10px;
+}
+
+.markdown-display-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.markdown-display-body {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.markdown-display-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #333;
+}

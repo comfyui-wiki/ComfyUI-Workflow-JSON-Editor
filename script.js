@@ -1994,5 +1994,194 @@ function updateButtonsStatus() {
   saveBtn.title = validationMessage.replace(/<[^>]*>/g, "");
 }
 
+// ===== MarkdownNote Generator Functions =====
+
+// Get tutorial URL and title input elements
+let tutorialUrlInput;
+let tutorialTitleInput;
+let generateMarkdownBtn;
+
+// Initialize MarkdownNote generator
+function initMarkdownGenerator() {
+  tutorialUrlInput = document.getElementById("tutorialUrl");
+  tutorialTitleInput = document.getElementById("tutorialTitle");
+  generateMarkdownBtn = document.getElementById("generateMarkdownBtn");
+  const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
+  
+  // Add click event for generate button
+  if (generateMarkdownBtn) {
+    generateMarkdownBtn.addEventListener("click", () => {
+      if (!parsedJson) {
+        showMessage("Please parse JSON data first", "error");
+        return;
+      }
+      
+      displayMarkdownContent();
+      showMessage("MarkdownNote content generated successfully!");
+    });
+  }
+  
+  // Add click event for copy button
+  if (copyMarkdownBtn) {
+    copyMarkdownBtn.addEventListener("click", () => {
+      const markdownContent = document.getElementById("markdownContent");
+      if (markdownContent && markdownContent.textContent) {
+        navigator.clipboard.writeText(markdownContent.textContent).then(() => {
+          showMessage("MarkdownNote content copied to clipboard!");
+        }).catch(() => {
+          // Fallback to older method
+          const textArea = document.createElement("textarea");
+          textArea.value = markdownContent.textContent;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+          showMessage("MarkdownNote content copied to clipboard!");
+        });
+      }
+    });
+  }
+}
+
+// Display MarkdownNote content in the page (without modifying JSON)
+function displayMarkdownContent() {
+  if (!parsedJson || !parsedJson.nodes) return;
+  
+  // Collect all model information grouped by directory
+  const modelsByDirectory = collectModelsByDirectory();
+  
+  // Generate Markdown content
+  const markdownContentText = generateMarkdownContent(modelsByDirectory);
+  
+  // Display in the page
+  const markdownDisplay = document.getElementById("markdownDisplay");
+  const markdownContent = document.getElementById("markdownContent");
+  const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
+  
+  if (markdownDisplay && markdownContent) {
+    markdownContent.textContent = markdownContentText;
+    markdownDisplay.style.display = "block";
+    
+    if (copyMarkdownBtn) {
+      copyMarkdownBtn.style.display = "inline-block";
+    }
+  }
+}
+
+// Collect models grouped by directory
+function collectModelsByDirectory() {
+  const modelsByDir = {};
+  
+  for (const nodeInfo of nodesToEdit) {
+    const { node } = nodeInfo;
+    
+    // Only process nodes with valid model configurations
+    if (!node.properties || !node.properties.models) continue;
+    
+    for (const model of node.properties.models) {
+      const directory = model.directory || "unknown";
+      
+      if (!modelsByDir[directory]) {
+        modelsByDir[directory] = [];
+      }
+      
+      // Check if model already exists in this directory
+      const exists = modelsByDir[directory].some(m => m.name === model.name);
+      if (!exists) {
+        modelsByDir[directory].push({
+          name: model.name,
+          url: model.url,
+          directory: model.directory
+        });
+      }
+    }
+  }
+  
+  return modelsByDir;
+}
+
+// Generate Markdown content
+function generateMarkdownContent(modelsByDirectory) {
+  let markdown = "";
+  
+  // Add tutorial link if provided
+  const tutorialUrl = tutorialUrlInput ? tutorialUrlInput.value.trim() : "";
+  const tutorialTitle = tutorialTitleInput ? tutorialTitleInput.value.trim() : "Tutorial";
+  
+  if (tutorialUrl) {
+    markdown += `[${tutorialTitle}](${tutorialUrl})\n\n`;
+  }
+  
+  markdown += "\n## Model links\n\n";
+  
+  // Directory name mapping for better display
+  const directoryLabels = {
+    "checkpoints": "Checkpoint",
+    "controlnet": "ControlNet",
+    "text_encoders": "Text Encoder",
+    "clip_vision": "CLIP Vision",
+    "diffusers": "Diffusers",
+    "gligen": "GLIGEN",
+    "loras": "LoRA",
+    "photomaker": "PhotoMaker",
+    "style_models": "Style Model",
+    "upscale_models": "Upscale Model",
+    "diffusion_models": "Diffusion Model",
+    "vae": "VAE",
+    "model_patches": "Model Patch",
+    "audio_encoders": "Audio Encoder"
+  };
+  
+  // Add model links grouped by type
+  const sortedDirs = Object.keys(modelsByDirectory).sort();
+  
+  for (const directory of sortedDirs) {
+    const models = modelsByDirectory[directory];
+    if (models.length === 0) continue;
+    
+    const label = directoryLabels[directory] || directory;
+    markdown += `**${label}**\n\n`;
+    
+    for (const model of models) {
+      if (model.url && model.url.trim()) {
+        markdown += `- [${model.name}](${model.url})\n`;
+      } else {
+        markdown += `- ${model.name}\n`;
+      }
+    }
+    
+    markdown += "\n";
+  }
+  
+  // Generate directory structure
+  markdown += "\nModel Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n";
+  
+  for (let i = 0; i < sortedDirs.length; i++) {
+    const directory = sortedDirs[i];
+    const models = modelsByDirectory[directory];
+    const isLast = i === sortedDirs.length - 1;
+    const prefix = isLast ? "└──" : "├──";
+    
+    markdown += `│   ${prefix} 📂 ${directory}/\n`;
+    
+    for (let j = 0; j < models.length; j++) {
+      const model = models[j];
+      const isLastModel = j === models.length - 1;
+      const modelPrefix = isLastModel ? "└──" : "├──";
+      const extraSpace = isLast ? "    " : "│   ";
+      
+      markdown += `│   ${extraSpace}   ${modelPrefix} ${model.name}\n`;
+    }
+  }
+  
+  markdown += "```\n";
+  
+  return markdown;
+}
+
+
 // Initialize after the page loads
-document.addEventListener("DOMContentLoaded", initPage);
+document.addEventListener("DOMContentLoaded", () => {
+  initPage();
+  initMarkdownGenerator();
+});
