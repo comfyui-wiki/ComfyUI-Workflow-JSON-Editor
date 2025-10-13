@@ -2085,8 +2085,10 @@ function collectModelsByDirectory() {
         modelsByDir[directory] = [];
       }
       
-      // Check if model already exists in this directory
-      const exists = modelsByDir[directory].some(m => m.name === model.name);
+      // Check if model already exists in this directory (check both name and url)
+      const exists = modelsByDir[directory].some(m => 
+        m.name === model.name && m.url === model.url
+      );
       if (!exists) {
         modelsByDir[directory].push({
           name: model.name,
@@ -2114,33 +2116,25 @@ function generateMarkdownContent(modelsByDirectory) {
   
   markdown += "\n## Model links\n\n";
   
-  // Directory name mapping for better display
-  const directoryLabels = {
-    "checkpoints": "Checkpoint",
-    "controlnet": "ControlNet",
-    "text_encoders": "Text Encoder",
-    "clip_vision": "CLIP Vision",
-    "diffusers": "Diffusers",
-    "gligen": "GLIGEN",
-    "loras": "LoRA",
-    "photomaker": "PhotoMaker",
-    "style_models": "Style Model",
-    "upscale_models": "Upscale Model",
-    "diffusion_models": "Diffusion Model",
-    "vae": "VAE",
-    "model_patches": "Model Patch",
-    "audio_encoders": "Audio Encoder"
-  };
+  // Sort directories according to directoryRules order
+  const directoryOrder = Object.values(directoryRules).filter((value, index, self) => self.indexOf(value) === index);
+  
+  // Get directories that exist in modelsByDirectory, sorted by directoryRules order
+  const sortedDirs = directoryOrder.filter(dir => modelsByDirectory[dir] && modelsByDirectory[dir].length > 0);
+  
+  // Add any directories not in directoryRules
+  Object.keys(modelsByDirectory).forEach(dir => {
+    if (!sortedDirs.includes(dir) && modelsByDirectory[dir].length > 0) {
+      sortedDirs.push(dir);
+    }
+  });
   
   // Add model links grouped by type
-  const sortedDirs = Object.keys(modelsByDirectory).sort();
-  
   for (const directory of sortedDirs) {
     const models = modelsByDirectory[directory];
     if (models.length === 0) continue;
     
-    const label = directoryLabels[directory] || directory;
-    markdown += `**${label}**\n\n`;
+    markdown += `**${directory}**\n\n`;
     
     for (const model of models) {
       if (model.url && model.url.trim()) {
