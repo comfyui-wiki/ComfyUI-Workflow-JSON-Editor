@@ -2170,6 +2170,10 @@ function generateMarkdownContent(modelsByDirectory) {
   
   markdown += "```\n";
   
+  // Add report issue section
+  markdown += "\n## Report issue\n\n";
+  markdown += "If you found any issues when running this workflow, [report template issue here](https://github.com/Comfy-Org/workflow_templates/issues)\n";
+  
   return markdown;
 }
 
