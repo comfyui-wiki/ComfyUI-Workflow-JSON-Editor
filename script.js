@@ -23,6 +23,7 @@ let directoryRules = {
   ImageOnlyCheckpointLoader: "checkpoints",
   ModelPatchLoader: "model_patches",
   AudioEncoderLoader: "audio_encoders",
+  LatentUpscaleModelLoader: "latent_upscale_models",
 };
 
 // DOM element references
