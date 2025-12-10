@@ -2186,9 +2186,9 @@ function generateMarkdownContent(modelsByDirectory) {
 
   // Report issue section at top
   markdown += "## Report issue\n\n";
-  markdown += "- Cannot run / runtime errors: https://github.com/comfyanonymous/ComfyUI/issues\n";
-  markdown += "- UI / frontend issues: https://github.com/Comfy-Org/ComfyUI_frontend/issues\n";
-  markdown += "- Workflow mistakes, wrong params, can't download the models: https://github.com/Comfy-Org/workflow_templates/issues\n\n";
+  markdown += "- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n";
+  markdown += "- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n";
+  markdown += "- Workflow mistakes, wrong params, can't download the models: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n\n";
 
   // Add tutorial link if provided
   const tutorialUrl = tutorialUrlInput ? tutorialUrlInput.value.trim() : "";
