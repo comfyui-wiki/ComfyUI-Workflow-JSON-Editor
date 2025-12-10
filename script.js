@@ -232,8 +232,11 @@ function parseJsonData() {
     // Find node positions in JSON
     findNodePositions(jsonString);
 
+    // Collect all nodes (main nodes + subgraph nodes)
+    const allNodes = collectAllNodes(parsedJson);
+
     // Find nodes that need editing
-    nodesToEdit = findNodesToEdit(parsedJson.nodes);
+    nodesToEdit = findNodesToEdit(allNodes);
 
     // Render node editing interface
     renderNodeEditor();
@@ -256,6 +259,42 @@ function parseJsonData() {
     `;
     showMessage(`Failed to parse JSON: ${error.message}`, "error");
   }
+}
+
+// Collect all nodes from main nodes and subgraphs
+function collectAllNodes(jsonData) {
+  const allNodes = [];
+  
+  // Add main nodes with subgraph info
+  if (jsonData.nodes && Array.isArray(jsonData.nodes)) {
+    for (const node of jsonData.nodes) {
+      allNodes.push({
+        ...node,
+        _source: "main",
+        _subgraphId: null,
+        _subgraphIndex: null
+      });
+    }
+  }
+  
+  // Add subgraph nodes
+  if (jsonData.definitions && jsonData.definitions.subgraphs && Array.isArray(jsonData.definitions.subgraphs)) {
+    for (let subgraphIndex = 0; subgraphIndex < jsonData.definitions.subgraphs.length; subgraphIndex++) {
+      const subgraph = jsonData.definitions.subgraphs[subgraphIndex];
+      if (subgraph.nodes && Array.isArray(subgraph.nodes)) {
+        for (const node of subgraph.nodes) {
+          allNodes.push({
+            ...node,
+            _source: "subgraph",
+            _subgraphId: subgraph.id,
+            _subgraphIndex: subgraphIndex
+          });
+        }
+      }
+    }
+  }
+  
+  return allNodes;
 }
 
 // Find the starting line number and model property position of each node in JSON
@@ -510,9 +549,20 @@ function createNodeCard(nodeInfo) {
   // Node header information
   const header = document.createElement("div");
   header.className = "node-header";
+  
+  // Add subgraph info if node is from subgraph
+  let subgraphInfo = "";
+  if (node._source === "subgraph" && parsedJson.definitions && parsedJson.definitions.subgraphs) {
+    const subgraph = parsedJson.definitions.subgraphs[node._subgraphIndex];
+    if (subgraph && subgraph.name) {
+      subgraphInfo = `<span class="subgraph-info" title="This node is from subgraph: ${subgraph.name}">📦 ${subgraph.name}</span>`;
+    }
+  }
+  
   header.innerHTML = `
         <span class="node-type">${node.type}</span>
         <span class="node-id">ID: ${node.id}</span>
+        ${subgraphInfo}
     `;
 
   // Add editable model path container
@@ -1267,8 +1317,19 @@ function updateJsonData(isManualUpdate = false) {
         }
       }
 
-      // Update the node's model information
-      const node = parsedJson.nodes.find((n) => n.id === nodeId);
+      // Find and update the node based on its source
+      let node = null;
+      if (nodeInfo.node._source === "subgraph" && nodeInfo.node._subgraphIndex !== null) {
+        // Update subgraph node
+        const subgraph = parsedJson.definitions.subgraphs[nodeInfo.node._subgraphIndex];
+        if (subgraph && subgraph.nodes) {
+          node = subgraph.nodes.find((n) => n.id === nodeId);
+        }
+      } else {
+        // Update main node
+        node = parsedJson.nodes.find((n) => n.id === nodeId);
+      }
+
       if (node) {
         if (!node.properties) {
           node.properties = {};
@@ -1621,8 +1682,22 @@ function updatePathWarningStatus(container, filePath, nodeType) {
 function updateWidgetsValue(nodeId, oldValue, newValue) {
   if (!parsedJson) return;
 
-  // Find the corresponding node
-  const node = parsedJson.nodes.find((n) => n.id === nodeId);
+  // Find the corresponding node (from main nodes or subgraphs)
+  const nodeInfo = nodesToEdit.find((info) => info.node.id === nodeId);
+  if (!nodeInfo) return;
+  
+  let node = null;
+  if (nodeInfo.node._source === "subgraph" && nodeInfo.node._subgraphIndex !== null) {
+    // Find node in subgraph
+    const subgraph = parsedJson.definitions.subgraphs[nodeInfo.node._subgraphIndex];
+    if (subgraph && subgraph.nodes) {
+      node = subgraph.nodes.find((n) => n.id === nodeId);
+    }
+  } else {
+    // Find node in main nodes
+    node = parsedJson.nodes.find((n) => n.id === nodeId);
+  }
+  
   if (!node || !node.widgets_values) return;
 
   // Find and update the value in widgets_values
@@ -1647,7 +1722,6 @@ function updateWidgetsValue(nodeId, oldValue, newValue) {
   findNodePositions(formattedJson);
 
   // Synchronously update edit area
-  const nodeInfo = nodesToEdit.find((info) => info.node.id === nodeId);
   if (nodeInfo) {
     // Update corresponding value in modelFiles array
     const index = nodeInfo.modelFiles.indexOf(oldValue);
@@ -2107,6 +2181,15 @@ function collectModelsByDirectory() {
 function generateMarkdownContent(modelsByDirectory) {
   let markdown = "";
   
+  // Guide for subgraphs
+  markdown += "Guide: [Subgraph](https://docs.comfy.org/interface/features/subgraph)\n\n";
+
+  // Report issue section at top
+  markdown += "## Report issue\n\n";
+  markdown += "- Cannot run / runtime errors: https://github.com/comfyanonymous/ComfyUI/issues\n";
+  markdown += "- UI / frontend issues: https://github.com/Comfy-Org/ComfyUI_frontend/issues\n";
+  markdown += "- Workflow mistakes, wrong params, can't download the models: https://github.com/Comfy-Org/workflow_templates/issues\n\n";
+
   // Add tutorial link if provided
   const tutorialUrl = tutorialUrlInput ? tutorialUrlInput.value.trim() : "";
   const tutorialTitle = tutorialTitleInput ? tutorialTitleInput.value.trim() : "Tutorial";
@@ -2170,10 +2253,6 @@ function generateMarkdownContent(modelsByDirectory) {
   }
   
   markdown += "```\n";
-  
-  // Add report issue section
-  markdown += "\n## Report issue\n\n";
-  markdown += "If you found any issues when running this workflow, [report template issue here](https://github.com/Comfy-Org/workflow_templates/issues)\n";
   
   return markdown;
 }
