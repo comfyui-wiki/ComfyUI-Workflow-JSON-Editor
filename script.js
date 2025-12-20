@@ -936,6 +936,22 @@ function createModelEntry(nodeId, model, fileName) {
     }
   });
 
+  // Add blur event to auto-convert Hugging Face blob links to resolve links
+  urlInput.addEventListener("blur", () => {
+    const currentUrl = urlInput.value.trim();
+    if (currentUrl && currentUrl.includes("huggingface.co") && currentUrl.includes("/blob/") && !currentUrl.includes("/resolve/")) {
+      // Auto-convert blob link to resolve link
+      const convertedUrl = currentUrl.replace("/blob/", "/resolve/");
+      urlInput.value = convertedUrl;
+      validateModelUrl(convertedUrl, model.name, urlValidation);
+      updateStats();
+      if (autoUpdateEnabled) {
+        updateJsonData();
+      }
+      showMessage("Converted Hugging Face page link to download link", "success");
+    }
+  });
+
   // Add focus event to highlight the corresponding line when editing the URL
   urlInput.addEventListener("focus", () => {
     highlightUrlField(nodeId, model.name);
@@ -1154,6 +1170,18 @@ function validateModelUrl(url, name, validationElement) {
   if (!url.trim()) {
     validationElement.className = "validation-status invalid";
     validationElement.title = "URL cannot be empty";
+    return;
+  }
+
+  // Check for Hugging Face blob links (page links, not download links)
+  const isHuggingFace = url.includes("huggingface.co");
+  const isBlobLink = url.includes("/blob/");
+  const isResolveLink = url.includes("/resolve/");
+
+  if (isHuggingFace && isBlobLink && !isResolveLink) {
+    // This is a page link, not a download link
+    validationElement.className = "validation-status invalid";
+    validationElement.title = "This is a page link, not a download link. Replace '/blob/' with '/resolve/' in the URL";
     return;
   }
 
@@ -1961,31 +1989,44 @@ function validateAllModels() {
           validationStatus.hasWarnings = true;
           validationStatus.invalidLinks++;
         } else {
-          // New: Check if model name is contained in URL
-          const modelNameWithoutExt = model.name.replace(
-            /\.(safetensors|sft)$/i,
-            ""
-          );
-          const modelNameBase = modelNameWithoutExt.split(/[_\-\.]/)[0]; // Get base name (first part)
-
-          // Decode URL for comparison
-          const decodedUrl = decodeURIComponent(model.url);
-
-          // First try full match
-          const nameInUrl = decodedUrl.includes(model.name);
-
-          // If full match fails, try base name match
-          const baseNameInUrl =
-            !nameInUrl &&
-            modelNameBase.length > 3 &&
-            decodedUrl.includes(modelNameBase);
-
-          if (!nameInUrl && !baseNameInUrl) {
+          // Check for Hugging Face blob links (page links, not download links)
+          const isHuggingFace = model.url.includes("huggingface.co");
+          const isBlobLink = model.url.includes("/blob/");
+          const isResolveLink = model.url.includes("/resolve/");
+          
+          if (isHuggingFace && isBlobLink && !isResolveLink) {
             validationStatus.hasWarnings = true;
-            validationStatus.urlMismatch++;
+            validationStatus.invalidLinks++;
             console.warn(
-              `Model name not contained in URL: Model "${model.name}" in node ${node.id} (${node.type}) URL does not contain model name`
+              `Invalid Hugging Face link: Model "${model.name}" in node ${node.id} (${node.type}) uses page link (/blob/) instead of download link (/resolve/)`
             );
+          } else {
+            // New: Check if model name is contained in URL
+            const modelNameWithoutExt = model.name.replace(
+              /\.(safetensors|sft)$/i,
+              ""
+            );
+            const modelNameBase = modelNameWithoutExt.split(/[_\-\.]/)[0]; // Get base name (first part)
+
+            // Decode URL for comparison
+            const decodedUrl = decodeURIComponent(model.url);
+
+            // First try full match
+            const nameInUrl = decodedUrl.includes(model.name);
+
+            // If full match fails, try base name match
+            const baseNameInUrl =
+              !nameInUrl &&
+              modelNameBase.length > 3 &&
+              decodedUrl.includes(modelNameBase);
+
+            if (!nameInUrl && !baseNameInUrl) {
+              validationStatus.hasWarnings = true;
+              validationStatus.urlMismatch++;
+              console.warn(
+                `Model name not contained in URL: Model "${model.name}" in node ${node.id} (${node.type}) URL does not contain model name`
+              );
+            }
           }
         }
       }
