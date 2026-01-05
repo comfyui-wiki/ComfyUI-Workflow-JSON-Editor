@@ -297,6 +297,44 @@ input:focus, textarea:focus {
     cursor: not-allowed;
 }
 
+/* Models header with button */
+.models-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.models-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+/* Global merge duplicates button style */
+#mergeAllDuplicatesBtn {
+    background-color: #ff9800;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    font-weight: 500;
+}
+
+#mergeAllDuplicatesBtn:hover {
+    background-color: #f57c00;
+}
+
+#mergeAllDuplicatesBtn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+
 .model-actions {
     display: flex;
     justify-content: flex-end;

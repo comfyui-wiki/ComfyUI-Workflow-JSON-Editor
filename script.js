@@ -9,6 +9,7 @@ let directoryRules = {
   DualCLIPLoader: "text_encoders",
   DiffControlNetLoader: "controlnet",
   GLIGENLoader: "gligen",
+  LTXVAudioVAELoader: "checkpoints",
   ImageOnlyCheckpointLoader: "checkpoints",
   LoraLoader: "loras",
   LoraLoaderModelOnly: "loras",
@@ -30,6 +31,7 @@ let directoryRules = {
 const jsonInput = document.getElementById("jsonInput");
 const lineNumbers = document.getElementById("lineNumbers");
 const copyBtn = document.getElementById("copyBtn");
+const mergeAllDuplicatesBtn = document.getElementById("mergeAllDuplicatesBtn");
 const nodesContainer = document.getElementById("nodesContainer");
 const directorySettingsContainer = document.getElementById("directorySettings");
 const addDirectoryRuleBtn = document.getElementById("addDirectoryRule");
@@ -74,6 +76,7 @@ function initPage() {
 
   // Initialize button events
   copyBtn.addEventListener("click", copyUpdatedJson);
+  mergeAllDuplicatesBtn.addEventListener("click", mergeAllDuplicates);
   addDirectoryRuleBtn.addEventListener("click", addNewDirectoryRule);
 
   // Initialize directory rule settings
@@ -1331,9 +1334,9 @@ function updateJsonData(isManualUpdate = false) {
       // Collect model information, only add complete models (name, url, and directory are not empty)
       for (const entry of modelEntries) {
         const inputs = entry.querySelectorAll("input");
-        const name = inputs[0].value.trim();
-        const url = inputs[1].value.trim();
-        const directory = inputs[2].value.trim();
+        const name = inputs[0] ? inputs[0].value.trim() : "";
+        const url = inputs[1] ? inputs[1].value.trim() : "";
+        const directory = inputs[2] ? inputs[2].value.trim() : "";
 
         // Only add models when all fields are not empty
         if (name && url && directory) {
@@ -1363,13 +1366,19 @@ function updateJsonData(isManualUpdate = false) {
           node.properties = {};
         }
 
+        // 保持其他属性不变，只更新 models
+        const originalProperties = { ...node.properties };
+        
         if (models.length > 0) {
           node.properties.models = models;
         } else {
           // If there are no models, delete the models property
-          if (node.properties.models) {
-            delete node.properties.models;
-          }
+          delete node.properties.models;
+        }
+        
+        // 确保其他重要属性被保留
+        if (originalProperties["Node name for S&R"]) {
+          node.properties["Node name for S&R"] = originalProperties["Node name for S&R"];
         }
       }
     }
@@ -2187,6 +2196,7 @@ function displayMarkdownContent() {
 // Collect models grouped by directory
 function collectModelsByDirectory() {
   const modelsByDir = {};
+  const seenModels = new Set(); // 用于跨目录去重
   
   for (const nodeInfo of nodesToEdit) {
     const { node } = nodeInfo;
@@ -2197,21 +2207,25 @@ function collectModelsByDirectory() {
     for (const model of node.properties.models) {
       const directory = model.directory || "unknown";
       
+      // 创建唯一标识符 (name + url 组合)
+      const modelId = `${model.name}|${model.url}`;
+      
+      // 如果这个模型已经存在，跳过
+      if (seenModels.has(modelId)) {
+        continue;
+      }
+      
+      seenModels.add(modelId);
+      
       if (!modelsByDir[directory]) {
         modelsByDir[directory] = [];
       }
       
-      // Check if model already exists in this directory (check both name and url)
-      const exists = modelsByDir[directory].some(m => 
-        m.name === model.name && m.url === model.url
-      );
-      if (!exists) {
-        modelsByDir[directory].push({
-          name: model.name,
-          url: model.url,
-          directory: model.directory
-        });
-      }
+      modelsByDir[directory].push({
+        name: model.name,
+        url: model.url,
+        directory: model.directory
+      });
     }
   }
   
@@ -2299,6 +2313,112 @@ function generateMarkdownContent(modelsByDirectory) {
   return markdown;
 }
 
+
+// Global function to merge duplicates across all nodes
+function mergeAllDuplicates() {
+  if (!parsedJson || !nodesToEdit || nodesToEdit.length === 0) {
+    showMessage("No data to process. Please parse JSON first.", "error");
+    return;
+  }
+
+  let totalRemovedCount = 0;
+  let processedNodes = 0;
+  
+  // Process each node synchronously
+  for (const nodeInfo of nodesToEdit) {
+    const nodeId = nodeInfo.node.id;
+    const modelsContainer = document.querySelector(
+      `.models-container[data-node-id="${nodeId}"]`
+    );
+    
+    if (!modelsContainer) continue;
+
+    const modelEntries = Array.from(modelsContainer.querySelectorAll(".model-entry"));
+    if (modelEntries.length <= 1) continue;
+
+    // Collect all models for this node with their DOM elements
+    const modelsData = [];
+    modelEntries.forEach((entry, index) => {
+      const inputs = entry.querySelectorAll("input");
+      const name = inputs[0] ? inputs[0].value.trim() : "";
+      const url = inputs[1] ? inputs[1].value.trim() : "";
+      const directory = inputs[2] ? inputs[2].value.trim() : "";
+
+      modelsData.push({
+        name,
+        url,
+        directory,
+        element: entry,
+        index
+      });
+    });
+
+    // Find duplicates within this node using name+url combination
+    const seen = new Map();
+    const toRemove = [];
+
+    modelsData.forEach((model) => {
+      // Create unique key from name and url
+      const key = `${model.name}|${model.url}`;
+      
+      // Only consider it a duplicate if both name and url are not empty
+      if (model.name && model.url) {
+        if (seen.has(key)) {
+          // This is a duplicate, mark for removal
+          toRemove.push(model.element);
+          totalRemovedCount++;
+        } else {
+          // First occurrence, keep it
+          seen.set(key, model);
+        }
+      }
+    });
+
+    // Remove duplicate elements immediately (synchronously)
+    if (toRemove.length > 0) {
+      toRemove.forEach((element) => {
+        if (element && element.parentNode) {
+          // Add visual feedback before removal
+          element.style.cssText += "background-color: #ffebee; opacity: 0.5; transform: scale(0.98);";
+          // Remove after short delay for visual feedback
+          setTimeout(() => {
+            if (element.parentNode) {
+              element.parentNode.removeChild(element);
+            }
+          }, 200);
+        }
+      });
+      processedNodes++;
+      
+      console.log(`Node ${nodeId}: Removed ${toRemove.length} duplicates`);
+    }
+  }
+
+  // Update UI and data after processing
+  setTimeout(() => {
+    if (totalRemovedCount > 0) {
+      showMessage(
+        `Successfully merged duplicates! Removed ${totalRemovedCount} duplicate entries across ${processedNodes} nodes.`,
+        "success"
+      );
+      
+      // Force update stats and JSON
+      updateStats();
+      if (autoUpdateEnabled) {
+        updateJsonData();
+      }
+    } else {
+      showMessage("No duplicate models found within any nodes.", "info");
+    }
+  }, 300);
+
+  // Log summary
+  console.log("Merge duplicates completed:", {
+    processedNodes,
+    totalRemovedCount,
+    totalNodes: nodesToEdit.length
+  });
+}
 
 // Initialize after the page loads
 document.addEventListener("DOMContentLoaded", () => {
