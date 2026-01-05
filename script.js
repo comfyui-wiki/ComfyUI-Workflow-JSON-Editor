@@ -88,6 +88,13 @@ function initPage() {
   // Add file upload event listener
   fileInput.addEventListener("change", handleFileUpload);
 
+  // Add blur event to auto-trim whitespace for file name input
+  if (fileName) {
+    fileName.addEventListener("blur", () => {
+      fileName.value = fileName.value.trim();
+    });
+  }
+
   // Add JSON input event listener - automatically parse when pasting content
   jsonInput.addEventListener("paste", () => {
     setTimeout(() => {
@@ -119,6 +126,13 @@ function initPage() {
   clearBulkLinks.addEventListener("click", () => {
     bulkLinksInput.value = "";
   });
+
+  // Add blur event to auto-trim whitespace for bulk links input
+  if (bulkLinksInput) {
+    bulkLinksInput.addEventListener("blur", () => {
+      bulkLinksInput.value = bulkLinksInput.value.trim();
+    });
+  }
 
   // Create validation status display area
   const actionsContainer = document.querySelector(".actions");
@@ -615,10 +629,14 @@ function createNodeCard(nodeInfo) {
     updateWidgetsValue(node.id, modelFiles[0], newValue);
   });
 
-  // Add blur event to ensure state updates when focus is lost
+  // Add blur event to auto-trim whitespace and ensure state updates when focus is lost
   modelPathInput.addEventListener("blur", (e) => {
-    const newValue = e.target.value;
-    updatePathWarningStatus(modelPathContainer, newValue, node.type);
+    const trimmedValue = e.target.value.trim();
+    if (e.target.value !== trimmedValue) {
+      e.target.value = trimmedValue;
+      updateWidgetsValue(node.id, modelFiles[0], trimmedValue);
+    }
+    updatePathWarningStatus(modelPathContainer, trimmedValue, node.type);
   });
 
   modelPathContainer.appendChild(modelPathInput);
@@ -900,6 +918,19 @@ function createModelEntry(nodeId, model, fileName) {
     }
   });
 
+  // Add blur event to auto-trim whitespace
+  nameInput.addEventListener("blur", () => {
+    const trimmedValue = nameInput.value.trim();
+    if (nameInput.value !== trimmedValue) {
+      nameInput.value = trimmedValue;
+      updateNameValidation(trimmedValue, fileName, nameValidation);
+      updateStats();
+      if (autoUpdateEnabled) {
+        updateJsonData();
+      }
+    }
+  });
+
   // Add focus event to highlight the corresponding line when editing the name
   nameInput.addEventListener("focus", () => {
     highlightNameField(nodeId, model.name);
@@ -939,19 +970,49 @@ function createModelEntry(nodeId, model, fileName) {
     }
   });
 
-  // Add blur event to auto-convert Hugging Face blob links to resolve links
+  // Add blur event to auto-trim whitespace and auto-convert Hugging Face blob/tree links
   urlInput.addEventListener("blur", () => {
-    const currentUrl = urlInput.value.trim();
-    if (currentUrl && currentUrl.includes("huggingface.co") && currentUrl.includes("/blob/") && !currentUrl.includes("/resolve/")) {
-      // Auto-convert blob link to resolve link
-      const convertedUrl = currentUrl.replace("/blob/", "/resolve/");
-      urlInput.value = convertedUrl;
-      validateModelUrl(convertedUrl, model.name, urlValidation);
+    let currentUrl = urlInput.value.trim();
+    let wasModified = false;
+
+    // First, trim whitespace
+    if (urlInput.value !== currentUrl) {
+      urlInput.value = currentUrl;
+      wasModified = true;
+    }
+
+    // Then, convert Hugging Face links if needed
+    if (currentUrl && currentUrl.includes("huggingface.co") && !currentUrl.includes("/resolve/")) {
+      let convertedUrl = currentUrl;
+      let wasConverted = false;
+
+      // Convert /blob/ to /resolve/
+      if (currentUrl.includes("/blob/")) {
+        convertedUrl = convertedUrl.replace("/blob/", "/resolve/");
+        wasConverted = true;
+      }
+
+      // Convert /tree/ to /resolve/
+      if (currentUrl.includes("/tree/")) {
+        convertedUrl = convertedUrl.replace("/tree/", "/resolve/");
+        wasConverted = true;
+      }
+
+      // Apply conversion if any changes were made
+      if (wasConverted) {
+        urlInput.value = convertedUrl;
+        wasModified = true;
+        showMessage("Converted Hugging Face page link to download link", "success");
+      }
+    }
+
+    // Update validation and JSON if any changes were made
+    if (wasModified) {
+      validateModelUrl(urlInput.value, model.name, urlValidation);
       updateStats();
       if (autoUpdateEnabled) {
         updateJsonData();
       }
-      showMessage("Converted Hugging Face page link to download link", "success");
     }
   });
 
@@ -987,6 +1048,17 @@ function createModelEntry(nodeId, model, fileName) {
     if (autoUpdateEnabled) {
       // Real-time update JSON
       updateJsonData();
+    }
+  });
+
+  // Add blur event to auto-trim whitespace
+  dirInput.addEventListener("blur", () => {
+    const trimmedValue = dirInput.value.trim();
+    if (dirInput.value !== trimmedValue) {
+      dirInput.value = trimmedValue;
+      if (autoUpdateEnabled) {
+        updateJsonData();
+      }
     }
   });
 
@@ -1176,15 +1248,20 @@ function validateModelUrl(url, name, validationElement) {
     return;
   }
 
-  // Check for Hugging Face blob links (page links, not download links)
+  // Check for Hugging Face blob/tree links (page links, not download links)
   const isHuggingFace = url.includes("huggingface.co");
   const isBlobLink = url.includes("/blob/");
+  const isTreeLink = url.includes("/tree/");
   const isResolveLink = url.includes("/resolve/");
 
-  if (isHuggingFace && isBlobLink && !isResolveLink) {
+  if (isHuggingFace && (isBlobLink || isTreeLink) && !isResolveLink) {
     // This is a page link, not a download link
     validationElement.className = "validation-status invalid";
-    validationElement.title = "This is a page link, not a download link. Replace '/blob/' with '/resolve/' in the URL";
+    if (isBlobLink) {
+      validationElement.title = "This is a page link, not a download link. Replace '/blob/' with '/resolve/' in the URL";
+    } else {
+      validationElement.title = "This is a page link, not a download link. Replace '/tree/' with '/resolve/' in the URL";
+    }
     return;
   }
 
@@ -1332,6 +1409,8 @@ function updateJsonData(isManualUpdate = false) {
       const models = [];
 
       // Collect model information, only add complete models (name, url, and directory are not empty)
+      const seenModels = new Set(); // Track seen models to prevent duplicates
+
       for (const entry of modelEntries) {
         const inputs = entry.querySelectorAll("input");
         const name = inputs[0] ? inputs[0].value.trim() : "";
@@ -1340,6 +1419,15 @@ function updateJsonData(isManualUpdate = false) {
 
         // Only add models when all fields are not empty
         if (name && url && directory) {
+          // Create unique key to detect duplicates
+          const modelKey = `${name}|${url}|${directory}`;
+
+          // Skip if this exact model already exists
+          if (seenModels.has(modelKey)) {
+            continue;
+          }
+
+          seenModels.add(modelKey);
           models.push({
             name,
             url,
@@ -1998,16 +2086,18 @@ function validateAllModels() {
           validationStatus.hasWarnings = true;
           validationStatus.invalidLinks++;
         } else {
-          // Check for Hugging Face blob links (page links, not download links)
+          // Check for Hugging Face blob/tree links (page links, not download links)
           const isHuggingFace = model.url.includes("huggingface.co");
           const isBlobLink = model.url.includes("/blob/");
+          const isTreeLink = model.url.includes("/tree/");
           const isResolveLink = model.url.includes("/resolve/");
-          
-          if (isHuggingFace && isBlobLink && !isResolveLink) {
+
+          if (isHuggingFace && (isBlobLink || isTreeLink) && !isResolveLink) {
             validationStatus.hasWarnings = true;
             validationStatus.invalidLinks++;
+            const linkType = isBlobLink ? "/blob/" : "/tree/";
             console.warn(
-              `Invalid Hugging Face link: Model "${model.name}" in node ${node.id} (${node.type}) uses page link (/blob/) instead of download link (/resolve/)`
+              `Invalid Hugging Face link: Model "${model.name}" in node ${node.id} (${node.type}) uses page link (${linkType}) instead of download link (/resolve/)`
             );
           } else {
             // New: Check if model name is contained in URL
@@ -2132,7 +2222,20 @@ function initMarkdownGenerator() {
   tutorialTitleInput = document.getElementById("tutorialTitle");
   generateMarkdownBtn = document.getElementById("generateMarkdownBtn");
   const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
-  
+
+  // Add blur events to auto-trim whitespace for tutorial inputs
+  if (tutorialUrlInput) {
+    tutorialUrlInput.addEventListener("blur", () => {
+      tutorialUrlInput.value = tutorialUrlInput.value.trim();
+    });
+  }
+
+  if (tutorialTitleInput) {
+    tutorialTitleInput.addEventListener("blur", () => {
+      tutorialTitleInput.value = tutorialTitleInput.value.trim();
+    });
+  }
+
   // Add click event for generate button
   if (generateMarkdownBtn) {
     generateMarkdownBtn.addEventListener("click", () => {
@@ -2253,8 +2356,8 @@ function generateMarkdownContent(modelsByDirectory) {
   if (tutorialUrl) {
     markdown += `[${tutorialTitle}](${tutorialUrl})\n\n`;
   }
-  
-  markdown += "\n## Model links\n\n";
+
+  markdown += "\n## Model links (for local users)\n\n";
   
   // Sort directories according to directoryRules order
   const directoryOrder = Object.values(directoryRules).filter((value, index, self) => self.indexOf(value) === index);
